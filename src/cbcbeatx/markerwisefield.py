@@ -15,7 +15,8 @@ __all__ = ["rhs_with_markerwise_field", "Markerwise"]
 
 class Markerwise():
     """
-    A container class representing an object defined by a number of objects combined with a mesh tag defining mesh domains and 
+    A container class representing an object defined by a number of
+    objects combined with a mesh tag defining mesh domains and
     a map from each object to the subdomain.
 
     Args:
@@ -54,11 +55,13 @@ class Markerwise():
         return self._objects[key]
 
 
-def rhs_with_markerwise_field(v: ufl.core.expr.Expr,
-                              g: typing.Optional[typing.Union[ufl.core.expr.Expr, Markerwise]]) -> tuple[ufl.Measure, ufl.Form]:
+def rhs_with_markerwise_field(
+    v: ufl.core.expr.Expr,
+    g: typing.Optional[typing.Union[
+        ufl.core.expr.Expr, Markerwise]]) -> tuple[ufl.Measure, ufl.Form]:
     """
     Create a cell integral for either:
-    1. A set of ufl expressions over subdomains 
+    1. A set of ufl expressions over subdomains
     2. A single ufl expression over the whole domain
     3. If no expression is supplied, return a zero integral (will be optimized away later)
     """

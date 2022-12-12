@@ -1,26 +1,3 @@
-"""
-These solvers solve the (pure) monodomain equations on the form: find
-the transmembrane potential :math:`v = v(x, t)` such that
-
-.. math::
-
-   v_t - \mathrm{div} ( G_i v) = I_s
-
-where the subscript :math:`t` denotes the time derivative; :math:`G_i`
-denotes a weighted gradient: :math:`G_i = M_i \mathrm{grad}(v)` for,
-where :math:`M_i` is the intracellular cardiac conductivity tensor;
-:math:`I_s` ise prescribed input. In addition, initial conditions are
-given for :math:`v`:
-
-.. math::
-
-   v(x, 0) = v_0
-
-Finally, boundary conditions must be prescribed. For now, this solver
-assumes pure homogeneous Neumann boundary conditions for :math:`v`.
-
-"""
-
 # Copyright (C) 2013 - 2022 Johan Hake (hake@simula.no), Jørgen S. Dokken
 #
 # SPDX-License-Identifier:    MIT
@@ -34,11 +11,32 @@ from .markerwisefield import rhs_with_markerwise_field, Markerwise
 from petsc4py import PETSc
 import numpy as np
 
-__all__["BasixMonodomainSolver", "MonodomainSolver"]
+__all__ = ["BasicMonodomainSolver", "MonodomainSolver"]
 
 
 class BasicMonodomainSolver(object):
-    """This solver is based on a theta-scheme discretization in time
+    """
+    Solve the (pure) monodomain equations on the form: find
+    the transmembrane potential :math:`v = v(x, t)` such that
+
+    .. math::
+
+        v_t - \\mathrm{div} ( G_i v) = I_s
+
+    where the subscript :math:`t` denotes the time derivative; :math:`G_i`
+    denotes a weighted gradient: :math:`G_i = M_i \\mathrm{grad}(v)` for,
+    where :math:`M_i` is the intracellular cardiac conductivity tensor;
+    :math:`I_s` ise prescribed input. In addition, initial conditions are
+    given for :math:`v`:
+
+    .. math::
+
+        v(x, 0) = v_0
+
+    Finally, boundary conditions must be prescribed. For now, this solver
+    assumes pure homogeneous Neumann boundary conditions for :math:`v`.
+
+    This solver is based on a theta-scheme discretization in time
     and CG_1 elements in space.
 
     .. note::
@@ -55,21 +53,21 @@ class BasicMonodomainSolver(object):
       mesh
         The spatial domain (mesh)
 
-      M_i 
+      M_i
         The intracellular conductivity tensor (as an UFL expression)
 
       time
         A constant holding the current time. If None is given, time is
         created for you, initialized to zero.
 
-      I_s 
+      I_s
         A typically time-dependent external stimulus given as a dict,
         with domain markers as the key and a
         :py:class:`dolfinx.fem.Expression` as values. NB: it is assumed
         that the time dependence of I_s is encoded via the 'time'
         Constant.
 
-      v\_ 
+      v_
         Initial condition for v. A new :py:class:`dolfinx.fem.Function`
         will be created if none is given.
 
