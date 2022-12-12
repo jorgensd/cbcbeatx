@@ -195,8 +195,9 @@ class MonodomainSolver(BasicMonodomainSolver):
     def __init__(self, mesh: dolfinx.mesh.Mesh, M_i: ufl.core.expr.Expr,
                  I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
                  v_: typing.Optional[ufl.core.expr.Expr] = None,
-                 time: typing.Optional[float] = 0, params: typing.Optional[dict] = None,
-                 use_custom_preconditioner: bool = False):
+                 time: typing.Optional[float] = 0, params: typing.Optional[dict] = None):
+
+        self._custom_prec = params.pop("use_custom_preconditioner", False)
 
         super.__init__(self, mesh, M_i, time, I_s, v_, params)
 
@@ -211,7 +212,6 @@ class MonodomainSolver(BasicMonodomainSolver):
 
         # Preassemble LHS
         dolfinx.fem.petsc.assemble_matrix(self._solver.A, self._solver.a)
-        self._custom_prec = use_custom_preconditioner
         if self._custom_prec:
             self._prec_matrix = dolfinx.fem.petsc.assemble_matrix(self._prec)
             self._solver.setOperators(self.solver.A, self._prec_matrix)
@@ -249,6 +249,7 @@ class MonodomainSolver(BasicMonodomainSolver):
             self._update_matrices()
         # Assemble RHS vector
         self._update_rhs()
+        self._t += dt
 
         # Solve linear system and update ghost values in the solution
         self._solver.solve(self.solver.b, self._vh.vector)
