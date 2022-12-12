@@ -1,0 +1,57 @@
+[build-system] # Require setuptool version due to https://github.com/pypa/setuptools/issues/2938
+requires = ["setuptools>=61.0.0", "wheel"]
+
+[project]
+name = "cbcbeatx"
+version = "0.1.0"
+description = "A framework for computational cardiac electrophysiology"
+authors = [{name = "Jørgen S. Dokken", email = "dokken@simula.no"}]
+license = {file = "LICENSE"}
+readme = "README.md"
+dependencies = ["fenics-dolfinx"]
+
+[project.scripts]
+cbcbeatx = "cbcbeatx.cli:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+dev = [
+    "pdbpp",
+    "ipython",
+    "mypy",
+    "flake8",
+]
+docs = [
+   "jupyter-book",
+   "jupytext",
+]
+all = [
+   "cbcbeatx[test]",
+   "cbcbeatx[dev]",
+   "cbcbeatx[docs]"
+]
+
+ 
+[tool.pytest.ini_options]
+addopts = [
+   "--import-mode=importlib",
+]
+
+testpaths = [
+    "tests"
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+# Folders to exclude
+exclude = [
+    "docs/",
+    "build/"
+]
+# Folder to check with mypy
+files = [ 
+    "src",
+    "tests"
+]
