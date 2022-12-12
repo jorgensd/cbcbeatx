@@ -14,23 +14,16 @@ on:
     # The CI is executed every day at 8am
     - cron: "0 8 * * *"
 
+  runs-on: ubuntu-22.04
+  container: ghcr.io/fenics/dolfinx/dolfinx:nightly
+
 jobs:
   check-code:
-    runs-on: ubuntu-22.04
-
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10"]
 
     steps:
       # This action sets the current path to the root of your github repo
       - uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
+     
       - name: Install code
         run: python -m pip install .[dev]
 
