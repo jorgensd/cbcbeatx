@@ -38,8 +38,9 @@ class Markerwise():
             g = Markerwise((g0, g1), (2, 5), markers)
     """
 
-    def __init__(self, objects: list[any], keys: list[int], marker: dolfinx.mesh.MeshTagsMetaClass):
-        assert (len(object) == len(keys))
+    def __init__(self, objects: list[typing.Any], keys: list[int],
+                 marker: dolfinx.mesh.MeshTagsMetaClass):
+        assert (len(objects) == len(keys))
         self._marker = marker
         self._objects = dict(zip(keys, objects))
 
@@ -51,7 +52,7 @@ class Markerwise():
         "The marker"
         return self._marker
 
-    def __getitem__(self, key: int) -> any:
+    def __getitem__(self, key: int) -> typing.Any:
         return self._objects[key]
 
 
@@ -67,11 +68,11 @@ def rhs_with_markerwise_field(
     """
     if g is None:
         dz = ufl.dx
-        rhs = 0.0*dz
+        rhs = 0.0
     try:
-        marker = g.marker
+        marker = g.marker  # type: ignore
         dz = ufl.Measure("dx", domain=marker.mesh, subdomain_data=marker)
-        rhs = sum([gi*v*dz(i) for (i, gi) in g.items()])
+        rhs = sum([gi*v*dz(i) for (i, gi) in g.items()])  # type: ignore
     except AttributeError:
         dz = ufl.dx
         rhs = g*v*dz
