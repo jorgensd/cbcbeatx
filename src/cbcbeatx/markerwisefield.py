@@ -22,7 +22,7 @@ class Markerwise():
     Args:
         objects (list[any]): _description_
         keys (list[int]): _description_
-        marker (dolfinx.mesh.MeshTags): _description_
+        marker (dolfinx.mesh.MeshTagsMetaClass): _description_
 
     Examples:
         Given (g0, g1), (2, 5) and `cell_markers`, let
@@ -38,7 +38,7 @@ class Markerwise():
             g = Markerwise((g0, g1), (2, 5), markers)
     """
 
-    def __init__(self, objects: list[any], keys: list[int], marker: dolfinx.mesh.MeshTags):
+    def __init__(self, objects: list[any], keys: list[int], marker: dolfinx.mesh.MeshTagsMetaClass):
         assert (len(object) == len(keys))
         self._marker = marker
         self._objects = dict(zip(keys, objects))
