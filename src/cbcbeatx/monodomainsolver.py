@@ -188,7 +188,7 @@ class BasicMonodomainSolver(object):
 class MonodomainSolver(BasicMonodomainSolver):
     __doc__ = BasicMonodomainSolver.__doc__
 
-    _prec: dolfinx.fem.Form
+    _prec: dolfinx.fem.FormMetaClass
     _prec_matrix: PETSc.Mat
     _custom_prec: bool
 
