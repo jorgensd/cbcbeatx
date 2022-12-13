@@ -238,9 +238,7 @@ class MonodomainSolver(BasicMonodomainSolver):
         dolfinx.fem.petsc.assemble_vector(self._solver.b, self._solver.L)
         self._solver.b.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
 
-    def step(self, interval: tuple[float, float]) -> typing.Generator[
-        typing.Tuple[typing.Tuple[float, float],
-                     typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function]], None, None]:
+    def step(self, interval: tuple[float, float]):
         """
         Solve on the given time interval (t0, t1).
         It is assumed that `v_` is in the correct for `t0`. This function updates
