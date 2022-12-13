@@ -154,8 +154,10 @@ class BasicMonodomainSolver(object):
     def solution_fields(self) -> tuple[dolfinx.fem.Function, dolfinx.fem.Function]:
         return self._v, self._vh
 
-    def solve(self, interval: tuple[float, float], dt: typing.Optional[float] = None) -> typing.Generator[typing.Tuple[typing.Tuple[float, float],
-                                                                                                                       typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function]], None, None]:
+    def solve(self, interval: tuple[float, float],
+              dt: typing.Optional[float] = None) -> typing.Generator[
+        typing.Tuple[typing.Tuple[float, float],
+                     typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function]], None, None]:
         """
         Solve the discretization on a time given interval
 
@@ -259,7 +261,8 @@ class MonodomainSolver(BasicMonodomainSolver):
         self._vh.x.scatter_forward()
         self._t += dt
 
-    def solve(self, interval: tuple[float, float], dt: typing.Optional[float] = None) -> typing.Generator[
+    def solve(self, interval: tuple[float, float],
+              dt: typing.Optional[float] = None) -> typing.Generator[
         typing.Tuple[typing.Tuple[float, float],
                      typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function]], None, None]:
         (T0, T) = interval
