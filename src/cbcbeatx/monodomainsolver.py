@@ -82,7 +82,7 @@ class BasicMonodomainSolver(object):
     _vh: dolfinx.fem.Function  # Solution at current time step
 
     _k_n: dolfinx.fem.Constant  # Delta t
-    _t: float  # Current time
+    _t: dolfinx.fem.Constant  # Current time
 
     _solver: dolfinx.fem.petsc.LinearProblem
 
@@ -92,17 +92,17 @@ class BasicMonodomainSolver(object):
     def __init__(self,
                  mesh: dolfinx.mesh.Mesh,
                  M_i: ufl.core.expr.Expr,
-                 time: typing.Optional[float] = None,
+                 time: typing.Optional[dolfinx.fem.Constant] = None,
                  I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
                  v0: typing.Optional[dolfinx.fem.Function] = None,
                  params: typing.Optional[dict] = None):
 
         # Get default parameters or input parameters
         params = {} if params is None else params
-        degree = params.pop("polynomial_degree", 1)
-        theta = params.pop("theta", 0.5)
-        jit_options = params.pop("jit_options", {})
-        form_compiler_options = params.pop("form_compiler_options", {})
+        degree = params.get("polynomial_degree", 1)
+        theta = params.get("theta", 0.5)
+        jit_options = params.get("jit_options", {})
+        form_compiler_options = params.get("form_compiler_options", {})
 
         self._theta = dolfinx.fem.Constant(mesh, theta)
 
@@ -117,7 +117,7 @@ class BasicMonodomainSolver(object):
             self._v.interpolate(init_v)
 
         # Set initial simulation time
-        self._t = time if time is not None else 0
+        self._t = time if time is not None else dolfinx.fem.Constant(mesh, np.float64(0.))
 
         self._vh = dolfinx.fem.Function(self._V)
 
@@ -131,11 +131,12 @@ class BasicMonodomainSolver(object):
         theta_parabolic = ufl.inner(M_i * ufl.grad(v_mid), ufl.grad(w))*dz(domain=mesh)
         G = Dt_v_k_n*w*dz + self._k_n * theta_parabolic - self._k_n * rhs
         a, L = ufl.system(G)
+        petsc_options = params.get("petsc_options", {})
         self._solver = dolfinx.fem.petsc.LinearProblem(
             a, L, u=self._vh,
             form_compiler_options=form_compiler_options,
             jit_options=jit_options,
-            petsc_options=params.pop("petsc_options", {}))
+            petsc_options=petsc_options)
 
     def step(self, interval: tuple[float, float]):
         """
@@ -148,7 +149,8 @@ class BasicMonodomainSolver(object):
         """
         (t0, t1) = interval
         self._k_n.value = t1 - t0
-        self._t = t0 + self._theta.value * (t1 - t0)
+        # Update t before updating RHS to capture possible time dependency
+        self._t.value = t0 + self._theta.value * (t1 - t0)
         self._solver.solve()
 
     def solution_fields(self) -> tuple[dolfinx.fem.Function, dolfinx.fem.Function]:
@@ -198,13 +200,12 @@ class MonodomainSolver(BasicMonodomainSolver):
 
     def __init__(self, mesh: dolfinx.mesh.Mesh, M_i: ufl.core.expr.Expr,
                  I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
-                 v_: typing.Optional[ufl.core.expr.Expr] = None,
-                 time: typing.Optional[float] = 0, params: typing.Optional[dict] = None):
+                 v0: typing.Optional[ufl.core.expr.Expr] = None,
+                 time: typing.Optional[dolfinx.fem.Constant] = None, params: typing.Optional[dict] = None):
         if params is None:
             params = {}
-        self._custom_prec = params.pop("use_custom_preconditioner", False)
-
-        super().__init__(mesh, M_i, time, I_s, v_, params)
+        self._custom_prec = params.get("use_custom_preconditioner", False)
+        super().__init__(mesh, M_i, time, I_s, v0, params)
 
         # Get default parameters or input parameters
         params = {} if params is None else params
@@ -253,11 +254,12 @@ class MonodomainSolver(BasicMonodomainSolver):
             self._k_n.value = dt
             self._update_matrices()
         # Assemble RHS vector
+        # Update t before updating RHS to capture possible time dependency
+        self._t.value = t0 + self._theta.value * (t1 - t0)
         self._update_rhs()
         # Solve linear system and update ghost values in the solution
         self._solver.solver.solve(self._solver.b, self._vh.vector)
         self._vh.x.scatter_forward()
-        self._t += dt
 
     def solve(self, interval: tuple[float, float],
               dt: typing.Optional[float] = None) -> typing.Generator[
