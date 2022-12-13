@@ -62,7 +62,7 @@ class TestBasicMonodomainSolver():
         vs.vector.normBegin(PETSc.NormType.NORM_2)
         b = vs.vector.normEnd(PETSc.NormType.NORM_2)
         # Check that result from solve and step match.
-        np.isclose(a, b)
+        assert np.isclose(a, b)
 
 
 class TestMonodomainSolver():
@@ -149,5 +149,6 @@ class TestMonodomainSolver():
             (v_, v) = fields
             v.vector.normBegin(PETSc.NormType.NORM_2)
             krylov_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
+            print(v_.x.array, id(v_))
 
         np.isclose(l2_norm, krylov_norm, atol=1e-4)

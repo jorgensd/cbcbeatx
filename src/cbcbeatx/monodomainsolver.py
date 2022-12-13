@@ -67,9 +67,8 @@ class BasicMonodomainSolver(object):
         that the time dependence of I_s is encoded via the 'time'
         Constant.
 
-      v_
-        Initial condition for v. A new :py:class:`dolfinx.fem.Function`
-        will be created if none is given.
+      v0
+        Initial condition for v.
 
       params
         Parameters for problem.f"polynomial_degree": The degree of the transmembral potential
@@ -95,7 +94,7 @@ class BasicMonodomainSolver(object):
                  M_i: ufl.core.expr.Expr,
                  time: typing.Optional[float] = None,
                  I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
-                 v_: typing.Optional[dolfinx.fem.Function] = None,
+                 v0: typing.Optional[dolfinx.fem.Function] = None,
                  params: typing.Optional[dict] = None):
 
         # Get default parameters or input parameters
@@ -110,11 +109,12 @@ class BasicMonodomainSolver(object):
         self._V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange", degree))
 
         # Get initial condition
-        if v_ is None:
-            self._v = dolfinx.fem.Function(self._V)
-            self._v.name = "v_"
-        else:
-            self._v = v_
+        self._v = dolfinx.fem.Function(self._V)
+        self._v.name = "v_"
+        # Interpolate init condition
+        if v0 is not None:
+            init_v = dolfinx.fem.Expression(v0, self._V.element.interpolation_points())
+            self._v.interpolate(init_v)
 
         # Set initial simulation time
         self._t = time if time is not None else 0
@@ -174,6 +174,7 @@ class BasicMonodomainSolver(object):
         # Step through time steps
         for i in range(num_steps):
             self.step((t0, t1))
+            # NOTE: This should probably be a named tuple
             yield (t0, t1), (self._v, self._vh)
             self._v.x.array[:] = self._vh.x.array[:]
             t0 = t1
