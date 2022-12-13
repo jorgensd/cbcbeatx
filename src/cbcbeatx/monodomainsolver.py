@@ -125,8 +125,8 @@ class BasicMonodomainSolver(object):
         self._k_n = dolfinx.fem.Constant(mesh, PETSc.ScalarType(0))
         v = ufl.TrialFunction(self._V)
         w = ufl.TestFunction(self._V)
-        Dt_v_k_n = (v - self._vh)
-        v_mid = self._theta * v + (1.-self._theta)*self._vh
+        Dt_v_k_n = (v - self._v)
+        v_mid = self._theta * v + (1.-self._theta)*self._v
         (dz, rhs) = rhs_with_markerwise_field(w, I_s)
         theta_parabolic = ufl.inner(M_i * ufl.grad(v_mid), ufl.grad(w))*dz(domain=mesh)
         G = Dt_v_k_n*w*dz + self._k_n * theta_parabolic - self._k_n * rhs

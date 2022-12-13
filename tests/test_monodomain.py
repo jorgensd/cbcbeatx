@@ -45,18 +45,17 @@ class TestBasicMonodomainSolver():
         solver = BasicMonodomainSolver(self.mesh, self.time,
                                        self.M_i, I_s=self.stimulus)
 
-        (v_, vs) = solver.solution_fields()
-
         # Solve
         interval = (self.t0, self.t0 + self.dt)
         solutions = solver.solve(interval, self.dt)
         for (interval, fields) in solutions:
-            (v_, vur) = fields
+            (vur_, vur) = fields
             vur.vector.normBegin(PETSc.NormType.NORM_2)
             a = vur.vector.normEnd(PETSc.NormType.NORM_2)
-        # Reset v_
-        v_.x.set(0.0)
 
+        # Reset v_
+        (v_, vs) = solver.solution_fields()
+        v_.x.set(0.0)
         # Step
         solver.step(interval)
         vs.vector.normBegin(PETSc.NormType.NORM_2)
@@ -149,6 +148,5 @@ class TestMonodomainSolver():
             (v_, v) = fields
             v.vector.normBegin(PETSc.NormType.NORM_2)
             krylov_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
-            print(v_.x.array, id(v_))
 
         np.isclose(l2_norm, krylov_norm, atol=1e-4)
