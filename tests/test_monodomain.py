@@ -195,9 +195,7 @@ def test_manufactured_solution(theta, degree):
         error = dolfinx.fem.form(ufl.inner(diff, diff)*ufl.dx(domain=mesh, metadata=metadata))
 
         solutions = solver.solve((t0, t1), dt)
-        u_expr = dolfinx.fem.Expression(u_exact, solver._V.element.interpolation_points())
-        for (interval, solution) in solutions:
-            _, uh = solution
+        for (interval, _) in solutions:
             _, ti = interval
 
             t_eval.value = ti

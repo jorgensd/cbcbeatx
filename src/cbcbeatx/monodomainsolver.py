@@ -13,11 +13,11 @@ import numpy as np
 
 __all__ = ["BasicMonodomainSolver", "MonodomainSolver"]
 
-
-class BasicMonodomainSolver(object):
+# Common documentation for both classes
+_doc = \
     """
-    Solve the (pure) monodomain equations on the form: find
-    the transmembrane potential :math:`v = v(x, t)` such that
+    Solve the (pure) monodomain equations on the form:
+    Find the transmembrane potential :math:`v = v(x, t)` such that
 
     .. math::
 
@@ -26,55 +26,82 @@ class BasicMonodomainSolver(object):
     where the subscript :math:`t` denotes the time derivative; :math:`G_i`
     denotes a weighted gradient: :math:`G_i = M_i \\mathrm{grad}(v)` for,
     where :math:`M_i` is the intracellular cardiac conductivity tensor;
-    :math:`I_s` ise prescribed input. In addition, initial conditions are
+    :math:`I_s` is prescribed input. In addition, initial conditions are
     given for :math:`v`:
 
     .. math::
 
         v(x, 0) = v_0
 
-    Finally, boundary conditions must be prescribed. For now, this solver
-    assumes pure homogeneous Neumann boundary conditions for :math:`v`.
+    This solver assumes pure homogeneous Neumann boundary conditions for :math:`v`.
 
-    This solver is based on a theta-scheme discretization in time
-    and CG_1 elements in space.
+    This solver is based on a :math:`\\theta`-scheme discretization in time
+    and N-th order Lagrange space elements in space.
 
-    .. note::
+    Args:
+        mesh: The spatial domain (mesh).
+        M_i: The intracellular conductivity tensor (as an UFL expression).
+        time: A constant holding the current time. If None is given, time is
+            created for you, initialized to zero. This can be used as an internal
+            variable in the RHS term :math:`I_s` to get a time-dependent input.
+        I_s: A typically time-dependent external stimulus given as a dict,
+            with domain markers as the key and a
+            :py:class:`dolfinx.fem.Expression` as values. NB: it is assumed
+            that the time dependence of I_s is encoded via the 'time'
+            Constant.
+        v0: Initial condition for v.
+        params: Parameter dictionary specifying problem specific parameters.
 
-       For the sake of simplicity and consistency with other solver
-       objects, this solver operates on its solution fields (as state
-       variables) directly internally. More precisely, solve (and
-       step) calls will act by updating the internal solution
-       fields. It implies that initial conditions can be set (and are
-       intended to be set) by modifying the solution fields prior to
-       simulation.
+            :code:`"polynomial_degree"`: The degree of the transmembral potential.
 
-    *Arguments*
-      mesh
-        The spatial domain (mesh)
+            :code:`"theta"`: Degree used in theta scheme.
 
-      M_i
-        The intracellular conductivity tensor (as an UFL expression)
+            :code:`"jit_options"`: Dictionary with options for Just in time compilation.
+            See `dolfinx/jit.py
+            <https://github.com/FEniCS/dolfinx/blob/main/python/dolfinx/jit.py>`_
+            for more information.
 
-      time
-        A constant holding the current time. If None is given, time is
-        created for you, initialized to zero.
+            :code:`"form_compiler_options"`: Dictionary with options for the FFCx form compiler.
+            Call :code:`python3 -m ffcx --help` for all available options.
 
-      I_s
-        A typically time-dependent external stimulus given as a dict,
-        with domain markers as the key and a
-        :py:class:`dolfinx.fem.Expression` as values. NB: it is assumed
-        that the time dependence of I_s is encoded via the 'time'
-        Constant.
+            :code:`"petsc_options"`: Dictionary containing options for the PETSc KSP solver.
+            See the `PETSc documentation
+            <https://petsc4py.readthedocs.io/en/stable/manual/ksp/>`_
+            for more information.
+"""
 
-      v0
-        Initial condition for v.
+# Specific documentation of `MonodomainSolver`
+_custom_doc = '''
+            :code:`"use_custom_preconditioner"`: :code:`True`/:code:`False` Use
+            :math:`\\int_\\Omega v\\cdot w + \\frac{\\Delta t}{2}
+            (M_i \\nabla v)\\cdot \\nabla w~\\mathrm{d}x`
+            as preconditioner
 
-      params
-        Parameters for problem.f"polynomial_degree": The degree of the transmembral potential
-        "theta": Degree used in theta scheme
 
-      """
+'''
+
+
+class BasicMonodomainSolver(object):
+    __doc__ = _doc + \
+        """
+    Examples:
+
+        .. highlight:: python
+        .. code-block:: python
+
+            import dolfinx
+            import ufl
+            from mpi4py import MPI
+            from cbcbeatx import BasicMonodomainSolver
+            N = 10
+            mesh = dolfinx.mesh.create_unit_square(MPI.COMM_WORLD, N, N)
+            M_i = 0.7
+            x = ufl.SpatialCoordinate(mesh)
+            I_s = x[0] * ufl.cos(x[1])
+            params = {"petsc_options": {"ksp_type": "preonly", "pc_type": "lu"}}
+            solver = BasicMonodomainSolver(mesh, M_i, I_s=I_s, params=params)
+
+    """
 
     _theta: dolfinx.fem.Constant  # Temporal discretization variable
     _V: dolfinx.fem.FunctionSpace  # Function space of solution
@@ -84,7 +111,7 @@ class BasicMonodomainSolver(object):
     _k_n: dolfinx.fem.Constant  # Delta t
     _t: dolfinx.fem.Constant  # Current time
 
-    _solver: dolfinx.fem.petsc.LinearProblem
+    _solver: dolfinx.fem.petsc.LinearProblem  # Wrapper around PETSc KSP object
 
     # Annotate all functions
     __slots__ = tuple(__annotations__)
@@ -94,7 +121,7 @@ class BasicMonodomainSolver(object):
                  M_i: ufl.core.expr.Expr,
                  time: typing.Optional[dolfinx.fem.Constant] = None,
                  I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
-                 v0: typing.Optional[dolfinx.fem.Function] = None,
+                 v0: typing.Optional[ufl.core.expr.Expr] = None,
                  params: typing.Optional[dict] = None):
 
         # Get default parameters or input parameters
@@ -117,7 +144,7 @@ class BasicMonodomainSolver(object):
             self._v.interpolate(init_v)
 
         # Set initial simulation time
-        self._t = time if time is not None else dolfinx.fem.Constant(mesh, np.float64(0.))
+        self._t = time if time is not None else dolfinx.fem.Constant(mesh, PETSc.ScalarType(0.))
 
         self._vh = dolfinx.fem.Function(self._V)
 
@@ -140,12 +167,12 @@ class BasicMonodomainSolver(object):
 
     def step(self, interval: tuple[float, float]):
         """
-        Solve on the given time interval (t0, t1).
-        It is assumed that `v_` is in the correct for `t0`. This function updates
-        `v` to the correct state at `t1`.
+        Propagate solver with step :math:`\\Delta t = [T_0, T_1]`.
+        It is assumed that `v_` is in the correct for :math:`T_0`. This function updates
+        :code:`v` to the correct state at :math:`T_0`.
 
         Args:
-            interval (tuple[float, float]): The time interval
+            interval(tuple[float, float]): The time interval :math:`[T_0, T_1]`
         """
         (t0, t1) = interval
         self._k_n.value = t1 - t0
@@ -161,11 +188,13 @@ class BasicMonodomainSolver(object):
         typing.Tuple[typing.Tuple[float, float],
                      typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function]], None, None]:
         """
-        Solve the discretization on a time given interval
+        Solve the problem on a time given interval :math:`[T_0, T_1]`
 
         Args:
-            interval (tuple[float, float]): _description_
-            dt (float, optional): _description_. Defaults to None.
+            interval(tuple[float, float]): The time interval :math:`[T_0, T_1]`
+            dt(float, optional): The time step :math:`\\Delta t`.
+                Defaults to :code:`None`, which corresponds to :math:`\\Delta t = T_1-T_0`.
+
         """
         (T0, T) = interval
         if dt is None:
@@ -185,12 +214,37 @@ class BasicMonodomainSolver(object):
             t1 = t0 + dt
 
     @property
-    def time(self):
+    def time(self) -> np.float64:
+        """Return current time used in solver"""
         return self._t.value
 
 
 class MonodomainSolver(BasicMonodomainSolver):
-    __doc__ = BasicMonodomainSolver.__doc__
+    __doc__ = _doc + _custom_doc + \
+        """
+    Examples:
+
+        .. highlight:: python
+        .. code-block:: python
+
+            import dolfinx
+            import ufl
+            from mpi4py import MPI
+            from petsc4py import PETSc
+            from cbcbeatx import MonodomainSolver
+            N = 10
+            mesh = dolfinx.mesh.create_unit_square(MPI.COMM_WORLD, N, N)
+            M_i = ufl.as_tensor(((0.2, 0), (0., 0.3)))
+            time = dolfinx.fem.Constant(mesh, PETSc.ScalarType(0.))
+            x = ufl.SpatialCoordinate(mesh)
+            I_s = x[0] * ufl.cos(x[1]) * time
+            v_0 = ufl.sin(2*ufl.pi*x[0])
+            petsc_options = {"ksp_type": "preonly", "pc_type": "lu"}
+            params = {"polynomial_degree": 2, "theta": 0.5, "petsc_options": petsc_options,
+            "use_custom_preconditioner": True}
+            solver = MonodomainSolver(mesh, M_i, time, I_s, v_0, params)
+
+    """
 
     _prec: dolfinx.fem.FormMetaClass
     _prec_matrix: PETSc.Mat
@@ -201,7 +255,8 @@ class MonodomainSolver(BasicMonodomainSolver):
     def __init__(self, mesh: dolfinx.mesh.Mesh, M_i: ufl.core.expr.Expr,
                  I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
                  v0: typing.Optional[ufl.core.expr.Expr] = None,
-                 time: typing.Optional[dolfinx.fem.Constant] = None, params: typing.Optional[dict] = None):
+                 time: typing.Optional[dolfinx.fem.Constant] = None,
+                 params: typing.Optional[dict] = None):
         if params is None:
             params = {}
         self._custom_prec = params.get("use_custom_preconditioner", False)
@@ -223,6 +278,9 @@ class MonodomainSolver(BasicMonodomainSolver):
             self._solver.solver.setOperators(self._solver.A, self._prec_matrix)
 
     def _update_matrices(self):
+        """
+        Re-assemble matrix.
+        """
         self._solver.A.zeroEntries()
         dolfinx.fem.petsc.assemble_matrix(self._solver.A, self._solver.a)  # type: ignore
         self._solver.A.assemble()
@@ -233,7 +291,9 @@ class MonodomainSolver(BasicMonodomainSolver):
             self._prec_matrix.assemble()
 
     def _update_rhs(self):
-        # Assemble rhs
+        """
+        Reassemble RHS vector
+        """
         with self._solver.b.localForm() as b_loc:
             b_loc.set(0)
         dolfinx.fem.petsc.assemble_vector(self._solver.b, self._solver.L)
@@ -241,12 +301,13 @@ class MonodomainSolver(BasicMonodomainSolver):
 
     def step(self, interval: tuple[float, float]):
         """
-        Solve on the given time interval (t0, t1).
-        It is assumed that `v_` is in the correct for `t0`. This function updates
-        `v` to the correct state at `t1`.
+        Solve the problem on a time given interval :math:`[T_0, T_1]`
 
         Args:
-            interval (tuple[float, float]): The time interval
+            interval(tuple[float, float]): The time interval :math:`[T_0, T_1]`
+            dt(float, optional): The time step :math:`\\Delta t`.
+                Defaults to :code:`None`, which corresponds to :math:`\\Delta t = T_1-T_0`.
+
         """
         (t0, t1) = interval
         dt = t1 - t0
