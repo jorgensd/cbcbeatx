@@ -20,7 +20,7 @@ class TestMonodomainSolver():
         self.M_i = 1.0
 
         self.t0 = 0.0
-        self.dt = 0.1
+        self.dt = 0.01
 
     @pytest.mark.fast
     def test_solve(self):
@@ -97,13 +97,13 @@ class TestMonodomainSolver():
 
 @pytest.mark.parametrize("theta", [0.5, 1.])
 @pytest.mark.parametrize("degree", [1, 2])
-def test_manufactured_solution(theta, degree):
+def test_manufactured_solution(theta: float, degree: int):
     """
     Test Monodomain solver against a manufactured solution
 
     Args:
-        theta (_type_): Time discretization parameter
-        degree (_type_): Degree of membrane potential funciton space
+        theta (float): Time discretization parameter
+        degree (int): Degree of membrane potential function space
     """
     num_refs = 3
     dt = 1e-3
