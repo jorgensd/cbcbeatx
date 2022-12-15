@@ -58,9 +58,8 @@ class TestMonodomainSolver():
         a, L = ufl.system(F)
         solver = dolfinx.fem.petsc.LinearProblem(a, L, petsc_options=params_direct["petsc_options"])
 
-        results_basic = []
         for (interval, fields) in solutions:
-            (v_, vur) = fields
+            (_, vur) = fields
             uh = solver.solve()
             assert np.allclose(vur.x.array, uh.x.array)
             u0.x.array[:] = uh.x.array[:]

@@ -119,7 +119,7 @@ class MonodomainSolver():
                  time: typing.Optional[dolfinx.fem.Constant] = None,
                  params: typing.Optional[dict] = None):
 
-       # Get default parameters or input parameters
+        # Get default parameters or input parameters
         params = {} if params is None else params
         degree = params.get("polynomial_degree", 1)
         theta = params.get("theta", 0.5)
@@ -237,8 +237,9 @@ class MonodomainSolver():
             dt(float, optional): The time step :math:`\\Delta t`.
                 Defaults to :code:`None`, which corresponds to :math:`\\Delta t = T_1-T_0`.
         Yields:
-            step_output: An iterator solving for each time step. Each element of the iterator is a tuple 
-            describing the time step, and a tuple of the previous and current solution.        """
+            step_output: An iterator solving for each time step. Each element of the iterator is
+                a tuple describing the time step, and a tuple of the previous and current solution.
+        """
         (T0, T) = interval
         if dt is None:
             num_steps = int(1)
