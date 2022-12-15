@@ -108,48 +108,62 @@ class MonodomainSolver():
 
     _prec: dolfinx.fem.FormMetaClass
     _prec_matrix: PETSc.Mat
-    _custom_prec: bool
+    parameters: dict[str, typing.Any]
 
-    __slots__ = tuple(__annotations__)
+    # __slots__ = tuple(__annotations__)
 
     def __init__(self, mesh: dolfinx.mesh.Mesh, M_i: ufl.core.expr.Expr,
                  I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
                  v0: typing.Optional[ufl.core.expr.Expr] = None,
                  time: typing.Optional[dolfinx.fem.Constant] = None,
-                 params: typing.Optional[dict] = None):
+                 params: typing.Optional[dict[str, typing.Any]] = None):
 
         # Get default parameters and overload with input parameters
-        _params = self.default_parameters()
+        self.parameters = params
+        self._mesh = mesh
+        self._v0 = v0
+        self._time = time
+        self._I_s = I_s
+        self._M_i = M_i
+        self.reinit()
+
+    @property
+    def parameters(self) -> dict[str, typing.Any]:
+        return self._parameters
+
+    @parameters.setter
+    def parameters(self, params) -> None:
+        self._parameters = type(self).default_parameters()
         if params is not None:
-            _params.update(params)
+            self._parameters.update(params)
 
+    def reinit(self) -> None:
         # Initialize class variables
-        self._custom_prec = _params["use_custom_preconditioner"]
-        self._theta = dolfinx.fem.Constant(mesh,  _params["theta"])
-        self._V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange",  _params["polynomial_degree"]))
+        self._theta = dolfinx.fem.Constant(self._mesh,  self.parameters.get("theta"))
+        self._V = dolfinx.fem.FunctionSpace(self._mesh, ("Lagrange",  self.parameters.get("polynomial_degree", 1)))
 
+        self._set_initial_conditions()
+        # Set initial simulation time
+        self._t = self._time if self._time is not None else dolfinx.fem.Constant(self._mesh, PETSc.ScalarType(0.))
+
+        # Extract integration measure and RHS of problem
+        (dz, rhs) = rhs_with_markerwise_field(self._V, self._I_s)
+
+        # Define variational form and KSP solver and pre-assemble
+        self._init_linearproblem(dz, self._M_i, rhs)
+
+        # Initialize the preconditioner
+        self._init_preconditioner(dz, self._M_i)
+
+    def _set_initial_conditions(self) -> None:
         # Set initial condition
         self._v = dolfinx.fem.Function(self._V)
         self._v.name = "v_prev"
-        if v0 is not None:
-            init_v = dolfinx.fem.Expression(v0, self._V.element.interpolation_points())
+        if self._v0 is not None:
+            init_v = dolfinx.fem.Expression(self._v0, self._V.element.interpolation_points())
             self._v.interpolate(init_v)
-
-        # Set initial simulation time
-        self._t = time if time is not None else dolfinx.fem.Constant(mesh, PETSc.ScalarType(0.))
-
-        # Extract integration measure and RHS of problem
-        (dz, rhs) = rhs_with_markerwise_field(self._V, I_s)
-
-        # Define variational form and KSP solver and pre-assemble
-        self._init_linearproblem(
-            _params["dt"], dz, M_i, rhs,  _params["form_compiler_options"], _params["jit_options"], _params["petsc_options"])
-
-        # Initialize the preconditioner
-        self._init_preconditioner(dz, M_i, _params["form_compiler_options"], _params["jit_options"])
-
-    def _init_linearproblem(self, dt: float, dz: ufl.Measure, M_i: ufl.core.expr.Expr, rhs: ufl.form.Form,
-                            form_compiler_options: dict, jit_options: dict, petsc_options: dict):
+        
+    def _init_linearproblem(self, dz: ufl.Measure, M_i: ufl.core.expr.Expr, rhs: ufl.form.Form):
         """Initialize variational forms (`dolfinx.fem.Form`) for LHS and RHS.
         Preassemble the LHS.
 
@@ -165,7 +179,7 @@ class MonodomainSolver():
         mesh = self._V.mesh
         self._vh = dolfinx.fem.Function(self._V)
         self._vh.name = "vh"
-        self._k_n = dolfinx.fem.Constant(mesh, dt)
+        self._k_n = dolfinx.fem.Constant(mesh, self.parameters["dt"])
 
         v = ufl.TrialFunction(self._V)
         w = ufl.TestFunction(self._V)
@@ -176,31 +190,31 @@ class MonodomainSolver():
         a, L = ufl.system(G)
         self._solver = dolfinx.fem.petsc.LinearProblem(
             a, L, u=self._vh,
-            form_compiler_options=form_compiler_options,
-            jit_options=jit_options,
-            petsc_options=petsc_options)
+            form_compiler_options=self.parameters.get("form_compiler_options"),
+            jit_options=self.parameters.get("jit_options"),
+            petsc_options=self.parameters.get("petsc_options"))
 
         dolfinx.fem.petsc.assemble_matrix(self._solver.A, self._solver.a)  # type: ignore
         self._solver.A.assemble()
 
-    def _init_preconditioner(self, M_i: ufl.core.expr.Expr, dz: ufl.Measure,
-                             form_compiler_options: dict, jit_options: dict,):
+    def _init_preconditioner(self, M_i: ufl.core.expr.Expr, dz: ufl.Measure) -> None:
         """
         Initialize custom preconditioner
         :math:`\\int_\\Omega v\\cdot w + \\frac{\\Delta t}{2}
         (M_i \\nabla v)\\cdot \\nabla w~\\mathrm{d}x`
         """
-        if self._custom_prec:
+        if self.parameters["use_custom_preconditioner"]:
             v = ufl.TrialFunction(self._V)
             w = ufl.TestFunction(self._V)
             self._prec = dolfinx.fem.form(
                 (v*w + self._k_n/2.0*ufl.inner(M_i*ufl.grad(v), ufl.grad(w)))*dz,
-                form_compiler_options=form_compiler_options, jit_options=jit_options)
+                form_compiler_options=self.parameters.get("form_compiler_options"), 
+                jit_options=self.parameters.get("jit_options"))
             self._prec_matrix = dolfinx.fem.petsc.assemble_matrix(self._prec)
             self._solver.solver.setOperators(self._solver.A, self._prec_matrix)
 
     @staticmethod
-    def default_parameters() -> dict:
+    def default_parameters() -> dict[str, typing.Any]:
         """Get the default parameters for the class
 
         Returns:
@@ -224,7 +238,7 @@ class MonodomainSolver():
         dolfinx.fem.petsc.assemble_matrix(self._solver.A, self._solver.a)  # type: ignore
         self._solver.A.assemble()
 
-        if self._custom_prec:
+        if self.parameters["use_custom_preconditioner"]:
             self._prec_matrix.zeroEntries()
             dolfinx.fem.petsc.assemble_matrix(self._prec_matrix, self._prec)
             self._prec_matrix.assemble()
