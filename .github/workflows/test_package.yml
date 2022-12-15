@@ -22,7 +22,7 @@ jobs:
     env:
       DEB_PYTHON_INSTALL_LAYOUT: deb_system
 
-    
+
     steps:
       - uses: actions/checkout@v3
 

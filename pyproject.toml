@@ -33,7 +33,7 @@ all = [
    "cbcbeatx[docs]"
 ]
 
- 
+
 [tool.pytest.ini_options]
 addopts = [
    "--import-mode=importlib",
@@ -51,7 +51,7 @@ exclude = [
     "build/"
 ]
 # Folder to check with mypy
-files = [ 
+files = [
     "src",
     "tests"
 ]

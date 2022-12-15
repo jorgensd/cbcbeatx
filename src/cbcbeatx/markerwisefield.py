@@ -1,19 +1,17 @@
-
-
 # Copyright (C) 2016 - 2022 Marie E. Rognes (meg@simula.no), Jørgen S. Dokken
 #
 # SPDX-License-Identifier:    MIT
 #
 # Last changed: 2022-12-12
-
+import typing
 
 import dolfinx
-import typing
 import ufl
+
 __all__ = ["rhs_with_markerwise_field", "Markerwise"]
 
 
-class Markerwise():
+class Markerwise:
     """
     A container class representing an object defined by a number of
     objects combined with a mesh tag defining mesh domains and
@@ -41,8 +39,12 @@ class Markerwise():
             g = Markerwise((g0, g1), (2, 5), markers)
     """
 
-    def __init__(self, objects: list[ufl.core.expr.Expr], keys: list[int],
-                 marker: dolfinx.mesh.MeshTagsMetaClass):
+    def __init__(
+        self,
+        objects: list[ufl.core.expr.Expr],
+        keys: list[int],
+        marker: dolfinx.mesh.MeshTagsMetaClass,
+    ):
         assert len(objects) == len(keys)
         assert marker.dim == marker.mesh.topology.dim
         self._marker = marker
@@ -70,8 +72,8 @@ class Markerwise():
 
 def rhs_with_markerwise_field(
     V: dolfinx.fem.FunctionSpace,
-    g: typing.Optional[typing.Union[
-        ufl.core.expr.Expr, Markerwise]]) -> tuple[ufl.Measure, ufl.Form]:
+    g: typing.Optional[typing.Union[ufl.core.expr.Expr, Markerwise]],
+) -> tuple[ufl.Measure, ufl.Form]:
     """
     Create the ufl-form :math:`G=\\int_\\Omega g v~\\mathrm{d}x` where `g` can be:
 
@@ -84,7 +86,7 @@ def rhs_with_markerwise_field(
         g: The forcing term
 
     Returns:
-       A tuple of the integration measure `dx` over the domain (without subdomain id set) and 
+       A tuple of the integration measure `dx` over the domain (without subdomain id set) and
        the source form `G`
     """
     v = ufl.TestFunction(V)
@@ -94,8 +96,8 @@ def rhs_with_markerwise_field(
     try:
         marker = g.marker  # type: ignore
         dz = ufl.Measure("dx", domain=marker.mesh, subdomain_data=marker)
-        rhs = sum([gi*v*dz(i) for (i, gi) in g.items()])  # type: ignore
+        rhs = sum([gi * v * dz(i) for (i, gi) in g.items()])  # type: ignore
     except AttributeError:
         dz = ufl.dx
-        rhs = g*v*dz
+        rhs = g * v * dz
     return (dz, rhs)
