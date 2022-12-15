@@ -1,4 +1,4 @@
-name: Check formatting
+name: Pre-commit
 
 on:
   push:
@@ -17,19 +17,12 @@ on:
 jobs:
   check-code:
     runs-on: ubuntu-22.04
-    container: ghcr.io/fenics/dolfinx/dolfinx:nightly
-    env:
-      DEB_PYTHON_INSTALL_LAYOUT: deb_system
-
     steps:
       # This action sets the current path to the root of your github repo
       - uses: actions/checkout@v3
 
-      - name: Install code
-        run: python3 -m pip install .[dev]
+      - name: Install pre-commit
+        run: python3 -m pip pre-commit
 
-      - name: Flake8 code
-        run: python3 -m flake8 -v
-
-      - name: Mypy check
-        run: python3 -m mypy -v
+      - name: Run hooks
+        run: pre-commit run --all
