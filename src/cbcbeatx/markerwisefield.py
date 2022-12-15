@@ -20,17 +20,20 @@ class Markerwise():
     a map from each object to the subdomain.
 
     Args:
-        objects (list[any]): _description_
-        keys (list[int]): _description_
-        marker (dolfinx.mesh.MeshTagsMetaClass): _description_
+        objects (list[ufl.core.expr.E[xr]): The forcing terms as ufl expressions
+        keys (list[int]): The cell-tag integer associated with each forcing term
+        marker (dolfinx.mesh.MeshTagsMetaClass): The cell tags
 
     Examples:
-        Given (g0, g1), (2, 5) and `cell_markers`, let
+        Given `(g0, g1)`, `(2, 5)` and `cell_markers`, let
 
         .. math::
 
-            g = g0 on domains marked by 2 in markers
-            g = g1 on domains marked by 5 in markers
+            g =\\begin{cases}
+              g0 \\text{ on domains marked by 2 in } cell\\_markers \\\\
+              g1 \\text{ on domains marked by 5 in } cell\\_markers
+            \\end{cases}
+
 
         .. highlight:: python
         .. code-block:: python
@@ -38,9 +41,10 @@ class Markerwise():
             g = Markerwise((g0, g1), (2, 5), markers)
     """
 
-    def __init__(self, objects: list[typing.Any], keys: list[int],
+    def __init__(self, objects: list[ufl.core.expr.Expr], keys: list[int],
                  marker: dolfinx.mesh.MeshTagsMetaClass):
-        assert (len(objects) == len(keys))
+        assert len(objects) == len(keys)
+        assert marker.dim == marker.mesh.topology.dim
         self._marker = marker
         self._objects = dict(zip(keys, objects))
 
@@ -49,23 +53,41 @@ class Markerwise():
 
     @property
     def marker(self):
-        "The marker"
+        "The cell marker"
         return self._marker
 
-    def __getitem__(self, key: int) -> typing.Any:
+    def __getitem__(self, key: int) -> ufl.core.expr.Expr:
+        """Get the ufl form for a given subdomain
+
+        Args:
+            key (int): The tag of the subdomain
+
+        Returns:
+            typing.Any: The corresponding ufl expression
+        """
         return self._objects[key]
 
 
 def rhs_with_markerwise_field(
-    v: ufl.core.expr.Expr,
+    V: dolfinx.fem.FunctionSpace,
     g: typing.Optional[typing.Union[
         ufl.core.expr.Expr, Markerwise]]) -> tuple[ufl.Measure, ufl.Form]:
     """
-    Create a cell integral for either:
-    1. A set of ufl expressions over subdomains
-    2. A single ufl expression over the whole domain
+    Create the ufl-form :math:`G=\\int_\\Omega g v~\\mathrm{d}x` where `g` can be:
+
+    1. A set of ufl expressions over subdomains (`Markerwise`)
+    2. A single ufl expression over the whole domain (`ufl.core.expr.Expr`)
     3. If no expression is supplied, return a zero integral (will be optimized away later)
+
+    Args:
+        V: The function space to extract the test function `v` from
+        g: The forcing term
+
+    Returns:
+       A tuple of the integration measure `dx` over the domain (without subdomain id set) and 
+       the source form `G`
     """
+    v = ufl.TestFunction(V)
     if g is None:
         dz = ufl.dx
         rhs = 0.0
