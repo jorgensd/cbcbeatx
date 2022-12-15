@@ -6,93 +6,81 @@ import pytest
 from cbcbeatx import MonodomainSolver
 import numpy as np
 
+@pytest.fixture
+def solver():
+    mesh = dolfinx.mesh.create_unit_cube(MPI.COMM_WORLD, 5, 5, 5)
 
-class TestMonodomainSolver():
-    def setUp(self):
-        N = 5
-        self.mesh = dolfinx.mesh.create_unit_cube(MPI.COMM_WORLD, N, N, N)
+    # Create stimulus
+    c = dolfinx.fem.Constant(mesh, 2.0)
+    stimulus = c
 
-        # Create stimulus
-        c = dolfinx.fem.Constant(self.mesh, 2.0)
-        self.stimulus = c
+    # Create conductivity "tensors"
+    M_i = 1.0
 
-        # Create conductivity "tensors"
-        self.M_i = 1.0
+    return MonodomainSolver(mesh, M_i, I_s=stimulus)
 
-        self.t0 = 0.0
-        self.dt = 0.01
 
-    @pytest.mark.fast
-    def test_solve(self):
-        "Test that solver runs."
-        self.setUp()
+@pytest.mark.fast
+def test_solve(solver):
+    "Test that solver runs."
+    solutions = solver.solve((0.0, 0.0 + 2*0.1), 0.1)
+    for (interval, fields) in solutions:
+        (v_, vur) = fields
 
-        # Create solver and solve
-        solver = MonodomainSolver(self.mesh,
-                                  self.M_i, I_s=self.stimulus)
-        solutions = solver.solve((self.t0, self.t0 + 2*self.dt), self.dt)
-        for (interval, fields) in solutions:
-            (v_, vur) = fields
+@pytest.mark.fast
+def test_compare_with_basic_solve(solver):
+    """Test that solver with direct linear algebra gives same
+    results as a straightforward implementation solver."""
+    # Create solver and solve
+    params_direct = {"petsc_options": {"ksp_type": "preonly", "pc_type": "lu",
+                                        "pc_factor_mat_solver_type": "mumps"}}
+    solver.parameters = params_direct
+    solver.reinit()
+    solutions = solver.solve((0.0, 0.0 + 2*0.1), 0.1)
 
-    @pytest.mark.fast
-    def test_compare_with_basic_solve(self):
-        """Test that solver with direct linear algebra gives same
-        results as a straightforward implementation solver."""
-        self.setUp()
+    # Create basic heat eq solver
+    V = solver._V
+    u = ufl.TrialFunction(V)
+    v = ufl.TestFunction(V)
+    u0 = dolfinx.fem.Function(V)
+    dt = dolfinx.fem.Constant(solver._mesh, 0.1)
+    F = ufl.inner(u-u0, v)*ufl.dx - dt*ufl.inner(solver._M_i*ufl.grad(u), ufl.grad(v)) * ufl.dx
+    F -= dt*ufl.inner(solver._I_s, v)*ufl.dx
+    a, L = ufl.system(F)
+    solver = dolfinx.fem.petsc.LinearProblem(a, L, petsc_options=params_direct["petsc_options"])
 
-        # Create solver and solve
-        params_direct = {"petsc_options": {"ksp_type": "preonly", "pc_type": "lu",
-                                           "pc_factor_mat_solver_type": "mumps"}}
-        solver = MonodomainSolver(self.mesh, self.M_i, I_s=self.stimulus,
-                                  params=params_direct)
-        solutions = solver.solve((self.t0, self.t0 + 2*self.dt), self.dt)
+    for (interval, fields) in solutions:
+        (_, vur) = fields
+        uh = solver.solve()
+        assert np.allclose(vur.x.array, uh.x.array)
+        u0.x.array[:] = uh.x.array[:]
 
-        # Create basic heat eq solver
-        V = solver._V
-        u = ufl.TrialFunction(V)
-        v = ufl.TestFunction(V)
-        u0 = dolfinx.fem.Function(V)
-        dt = dolfinx.fem.Constant(self.mesh, self.dt)
-        F = ufl.inner(u-u0, v)*ufl.dx - dt*ufl.inner(self.M_i*ufl.grad(u), ufl.grad(v)) * ufl.dx
-        F -= dt*ufl.inner(self.stimulus, v)*ufl.dx
-        a, L = ufl.system(F)
-        solver = dolfinx.fem.petsc.LinearProblem(a, L, petsc_options=params_direct["petsc_options"])
+@pytest.mark.skipif(MPI.COMM_WORLD.size > 1,
+                    reason="This test should only be run in serial.")
+@pytest.mark.fast
+def test_compare_direct_iterative(solver):
+    "Test that direct and iterative solution give comparable results."
+    # Create solver and solve
+    params_direct = {"petsc_options": {"ksp_type": "preonly", "pc_type": "lu"}}
+    solver.parameters = params_direct
+    solver.reinit()
+    solutions = solver.solve((0.0, 0.0 + 3*0.1), 0.1)
+    for (interval, fields) in solutions:
+        (v_, v) = fields
+        v.vector.normBegin(PETSc.NormType.NORM_2)
+        l2_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
 
-        for (interval, fields) in solutions:
-            (_, vur) = fields
-            uh = solver.solve()
-            assert np.allclose(vur.x.array, uh.x.array)
-            u0.x.array[:] = uh.x.array[:]
+    # Create solver and solve using iterative means
+    params_iter = {"petsc_options": {"ksp_type": "gmres", "pc_type": "ilu", "ksp_view": None}}
+    solver.parameters = params_iter
+    solver.reinit()
+    solutions = solver.solve((0.0, 0.0 + 3*0.1), 0.1)
+    for (interval, fields) in solutions:
+        (v_, v) = fields
+        v.vector.normBegin(PETSc.NormType.NORM_2)
+        krylov_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
 
-    @pytest.mark.skipif(MPI.COMM_WORLD.size > 1,
-                        reason="This test should only be run in serial.")
-    @pytest.mark.fast
-    def test_compare_direct_iterative(self):
-        "Test that direct and iterative solution give comparable results."
-        self.setUp()
-
-        # Create solver and solve
-        params_direct = {"petsc_options": {"ksp_type": "preonly", "pc_type": "lu"}}
-        solver = MonodomainSolver(self.mesh, self.M_i, I_s=self.stimulus,
-                                  params=params_direct)
-        solutions = solver.solve((self.t0, self.t0 + 3*self.dt), self.dt)
-        for (interval, fields) in solutions:
-            (v_, v) = fields
-            v.vector.normBegin(PETSc.NormType.NORM_2)
-            l2_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
-
-        # Create solver and solve using iterative means
-        params_iter = {"petsc_options": {"ksp_type": "gmres", "pc_type": "ilu", "ksp_view": None}}
-        solver = MonodomainSolver(self.mesh, self.M_i,
-                                  I_s=self.stimulus,
-                                  params=params_iter)
-        solutions = solver.solve((self.t0, self.t0 + 3*self.dt), self.dt)
-        for (interval, fields) in solutions:
-            (v_, v) = fields
-            v.vector.normBegin(PETSc.NormType.NORM_2)
-            krylov_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
-
-        np.isclose(l2_norm, krylov_norm, atol=1e-4)
+    np.isclose(l2_norm, krylov_norm, atol=1e-4)
 
 
 @pytest.mark.parametrize("theta", [0.5, 1.])
