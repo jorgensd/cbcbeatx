@@ -22,4 +22,3 @@ RUN python3 -m pip install ./cbcbeatx[all]
 
 # We remove the contents of the temporary directory to minimize the size of the image
 RUN rm -rf /tmp
-

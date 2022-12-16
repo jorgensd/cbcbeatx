@@ -3,18 +3,20 @@
 # SPDX-License-Identifier:    MIT
 #
 # Last changed: 2022-12-12
+import typing
 
 import dolfinx
-import ufl
-import typing
-from .markerwisefield import rhs_with_markerwise_field, Markerwise
-from petsc4py import PETSc
 import numpy as np
+import ufl
+from petsc4py import PETSc
+
+from .markerwisefield import Markerwise
+from .markerwisefield import rhs_with_markerwise_field
 
 __all__ = ["MonodomainSolver"]
 
 
-class MonodomainSolver():
+class MonodomainSolver:
     """
     Solve the (pure) monodomain equations on the form:
     Find the transmembrane potential :math:`v = v(x, t)` such that
@@ -96,6 +98,7 @@ class MonodomainSolver():
             solver = MonodomainSolver(mesh, M_i, time, I_s, v_0, params)
 
     """
+
     _theta: dolfinx.fem.Constant  # Temporal discretization variable
     _V: dolfinx.fem.FunctionSpace  # Function space of solution
     _v: dolfinx.fem.Function  # Solution at previous time step
@@ -112,11 +115,15 @@ class MonodomainSolver():
 
     __slots__ = tuple(__annotations__)
 
-    def __init__(self, mesh: dolfinx.mesh.Mesh, M_i: ufl.core.expr.Expr,
-                 I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
-                 v0: typing.Optional[ufl.core.expr.Expr] = None,
-                 time: typing.Optional[dolfinx.fem.Constant] = None,
-                 params: typing.Optional[dict] = None):
+    def __init__(
+        self,
+        mesh: dolfinx.mesh.Mesh,
+        M_i: ufl.core.expr.Expr,
+        I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
+        v0: typing.Optional[ufl.core.expr.Expr] = None,
+        time: typing.Optional[dolfinx.fem.Constant] = None,
+        params: typing.Optional[dict] = None,
+    ):
 
         # Get default parameters and overload with input parameters
         _params = self.default_parameters()
@@ -125,8 +132,11 @@ class MonodomainSolver():
 
         # Initialize class variables
         self._custom_prec = _params["use_custom_preconditioner"]
-        self._theta = dolfinx.fem.Constant(mesh,  _params["theta"])
-        self._V = dolfinx.fem.FunctionSpace(mesh, ("Lagrange",  _params["polynomial_degree"]))
+        self._theta = dolfinx.fem.Constant(mesh, _params["theta"])
+        self._V = dolfinx.fem.FunctionSpace(
+            mesh,
+            ("Lagrange", _params["polynomial_degree"]),
+        )
 
         # Set initial condition
         self._v = dolfinx.fem.Function(self._V)
@@ -136,20 +146,44 @@ class MonodomainSolver():
             self._v.interpolate(init_v)
 
         # Set initial simulation time
-        self._t = time if time is not None else dolfinx.fem.Constant(mesh, PETSc.ScalarType(0.))
+        self._t = (
+            time
+            if time is not None
+            else dolfinx.fem.Constant(mesh, PETSc.ScalarType(0.0))
+        )
 
         # Extract integration measure and RHS of problem
         (dz, rhs) = rhs_with_markerwise_field(self._V, I_s)
 
         # Define variational form and KSP solver and pre-assemble
         self._init_linearproblem(
-            _params["dt"], dz, M_i, rhs,  _params["form_compiler_options"], _params["jit_options"], _params["petsc_options"])
+            _params["dt"],
+            dz,
+            M_i,
+            rhs,
+            _params["form_compiler_options"],
+            _params["jit_options"],
+            _params["petsc_options"],
+        )
 
         # Initialize the preconditioner
-        self._init_preconditioner(dz, M_i, _params["form_compiler_options"], _params["jit_options"])
+        self._init_preconditioner(
+            dz,
+            M_i,
+            _params["form_compiler_options"],
+            _params["jit_options"],
+        )
 
-    def _init_linearproblem(self, dt: float, dz: ufl.Measure, M_i: ufl.core.expr.Expr, rhs: ufl.form.Form,
-                            form_compiler_options: dict, jit_options: dict, petsc_options: dict):
+    def _init_linearproblem(
+        self,
+        dt: float,
+        dz: ufl.Measure,
+        M_i: ufl.core.expr.Expr,
+        rhs: ufl.form.Form,
+        form_compiler_options: dict,
+        jit_options: dict,
+        petsc_options: dict,
+    ):
         """Initialize variational forms (`dolfinx.fem.Form`) for LHS and RHS.
         Preassemble the LHS.
 
@@ -169,22 +203,32 @@ class MonodomainSolver():
 
         v = ufl.TrialFunction(self._V)
         w = ufl.TestFunction(self._V)
-        Dt_v_k_n = (v - self._v)
-        v_mid = self._theta * v + (1.-self._theta)*self._v
-        theta_parabolic = ufl.inner(M_i * ufl.grad(v_mid), ufl.grad(w))*dz(domain=mesh)
-        G = Dt_v_k_n*w*dz + self._k_n * theta_parabolic - self._k_n * rhs
+        Dt_v_k_n = v - self._v
+        v_mid = self._theta * v + (1.0 - self._theta) * self._v
+        theta_parabolic = ufl.inner(M_i * ufl.grad(v_mid), ufl.grad(w)) * dz(
+            domain=mesh,
+        )
+        G = Dt_v_k_n * w * dz + self._k_n * theta_parabolic - self._k_n * rhs
         a, L = ufl.system(G)
         self._solver = dolfinx.fem.petsc.LinearProblem(
-            a, L, u=self._vh,
+            a,
+            L,
+            u=self._vh,
             form_compiler_options=form_compiler_options,
             jit_options=jit_options,
-            petsc_options=petsc_options)
+            petsc_options=petsc_options,
+        )
 
         dolfinx.fem.petsc.assemble_matrix(self._solver.A, self._solver.a)  # type: ignore
         self._solver.A.assemble()
 
-    def _init_preconditioner(self, M_i: ufl.core.expr.Expr, dz: ufl.Measure,
-                             form_compiler_options: dict, jit_options: dict,):
+    def _init_preconditioner(
+        self,
+        M_i: ufl.core.expr.Expr,
+        dz: ufl.Measure,
+        form_compiler_options: dict,
+        jit_options: dict,
+    ):
         """
         Initialize custom preconditioner
         :math:`\\int_\\Omega v\\cdot w + \\frac{\\Delta t}{2}
@@ -194,8 +238,11 @@ class MonodomainSolver():
             v = ufl.TrialFunction(self._V)
             w = ufl.TestFunction(self._V)
             self._prec = dolfinx.fem.form(
-                (v*w + self._k_n/2.0*ufl.inner(M_i*ufl.grad(v), ufl.grad(w)))*dz,
-                form_compiler_options=form_compiler_options, jit_options=jit_options)
+                (v * w + self._k_n / 2.0 * ufl.inner(M_i * ufl.grad(v), ufl.grad(w)))
+                * dz,
+                form_compiler_options=form_compiler_options,
+                jit_options=jit_options,
+            )
             self._prec_matrix = dolfinx.fem.petsc.assemble_matrix(self._prec)
             self._solver.solver.setOperators(self._solver.A, self._prec_matrix)
 
@@ -206,15 +253,19 @@ class MonodomainSolver():
         Returns:
            dict: The default parameters
         """
-        return {"polynomial_degree": 1,
-                "dt": 0.1,
-                "theta": 0.5,
-                "use_custom_preconditioner": False,
-                "jit_options": {},
-                "form_compiler_options": {},
-                "petsc_options": {"ksp_type": "preonly",
-                                  "pc_type": "lu",
-                                  "pc_factor_mat_solver_type": "mumps"}}
+        return {
+            "polynomial_degree": 1,
+            "dt": 0.1,
+            "theta": 0.5,
+            "use_custom_preconditioner": False,
+            "jit_options": {},
+            "form_compiler_options": {},
+            "petsc_options": {
+                "ksp_type": "preonly",
+                "pc_type": "lu",
+                "pc_factor_mat_solver_type": "mumps",
+            },
+        }
 
     def _update_matrices(self):
         """
@@ -236,7 +287,10 @@ class MonodomainSolver():
         with self._solver.b.localForm() as b_loc:
             b_loc.set(0)
         dolfinx.fem.petsc.assemble_vector(self._solver.b, self._solver.L)
-        self._solver.b.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        self._solver.b.ghostUpdate(
+            addv=PETSc.InsertMode.ADD,
+            mode=PETSc.ScatterMode.REVERSE,
+        )
 
     def step(self, interval: tuple[float, float]):
         """
@@ -261,10 +315,18 @@ class MonodomainSolver():
         self._solver.solver.solve(self._solver.b, self._vh.vector)
         self._vh.x.scatter_forward()
 
-    def solve(self, interval: tuple[float, float],
-              dt: typing.Optional[float] = None) -> typing.Generator[
-        typing.Tuple[typing.Tuple[float, float],
-                     typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function]], None, None]:
+    def solve(
+        self,
+        interval: tuple[float, float],
+        dt: typing.Optional[float] = None,
+    ) -> typing.Generator[
+        typing.Tuple[
+            typing.Tuple[float, float],
+            typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function],
+        ],
+        None,
+        None,
+    ]:
         """
         Solve the problem on a time given interval :math:`[T_0, T_1]`
 
@@ -279,7 +341,7 @@ class MonodomainSolver():
         (T0, T) = interval
         if dt is None:
             num_steps = int(1)
-            dt = T-T0
+            dt = T - T0
         else:
             num_steps = int((T - T0) // dt)
         t0 = T0

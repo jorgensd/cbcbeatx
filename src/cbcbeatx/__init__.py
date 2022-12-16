@@ -1,7 +1,9 @@
 """Top-level package for cbcbeatx."""
-from .monodomainsolver import MonodomainSolver
-from .markerwisefield import rhs_with_markerwise_field, Markerwise
 from importlib.metadata import metadata
+
+from .markerwisefield import Markerwise
+from .markerwisefield import rhs_with_markerwise_field
+from .monodomainsolver import MonodomainSolver
 
 meta = metadata("cbcbeatx")
 __version__ = meta["Version"]
