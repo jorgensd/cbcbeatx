@@ -158,7 +158,7 @@ def test_manufactured_solution(theta: float, degree: int):
 
         cmap = mesh.topology.index_map(mesh.topology.dim)
         cells_local = np.arange(cmap.size_local + cmap.num_ghosts, dtype=np.int32)
-        hs[i] = np.max(dolfinx.cpp.mesh.h(mesh, mesh.topology.dim, cells_local))
+        hs[i] = np.max(mesh.h(mesh.topology.dim, cells_local))
 
         x = ufl.SpatialCoordinate(mesh)
         t = dolfinx.fem.Constant(mesh, PETSc.ScalarType(t0))
