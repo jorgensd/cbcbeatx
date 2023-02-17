@@ -20,7 +20,7 @@ class Markerwise:
     Args:
         objects (list[ufl.core.expr.E[xr]): The forcing terms as ufl expressions
         keys (list[int]): The cell-tag integer associated with each forcing term
-        marker (dolfinx.mesh.MeshTagsMetaClass): The cell tags
+        marker (dolfinx.mesh.MeshTags): The cell tags
 
     Examples:
         Given `(g0, g1)`, `(2, 5)` and `cell_markers`, let
@@ -43,7 +43,7 @@ class Markerwise:
         self,
         objects: list[ufl.core.expr.Expr],
         keys: list[int],
-        marker: dolfinx.mesh.MeshTagsMetaClass,
+        marker: dolfinx.mesh.MeshTags,
     ):
         assert len(objects) == len(keys)
         assert marker.dim == marker.mesh.topology.dim
@@ -54,7 +54,7 @@ class Markerwise:
         return self._objects.items()
 
     @property
-    def marker(self):
+    def marker(self) -> dolfinx.mesh.MeshTags:
         "The cell marker"
         return self._marker
 
