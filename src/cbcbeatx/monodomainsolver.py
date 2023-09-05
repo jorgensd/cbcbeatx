@@ -9,6 +9,7 @@ import dolfinx
 import numpy as np
 import ufl
 from petsc4py import PETSc
+import dolfinx.fem.petsc
 
 from .markerwisefield import Markerwise
 from .markerwisefield import rhs_with_markerwise_field
