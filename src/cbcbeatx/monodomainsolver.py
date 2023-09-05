@@ -9,6 +9,7 @@ import dolfinx
 import numpy as np
 import ufl
 from petsc4py import PETSc
+import dolfinx.fem.petsc
 
 from .markerwisefield import Markerwise
 from .markerwisefield import rhs_with_markerwise_field
@@ -109,7 +110,7 @@ class MonodomainSolver:
 
     _solver: dolfinx.fem.petsc.LinearProblem  # Wrapper around PETSc KSP object
 
-    _prec: dolfinx.fem.FormMetaClass
+    _prec: dolfinx.fem.Form
     _prec_matrix: PETSc.Mat
     _custom_prec: bool
 
