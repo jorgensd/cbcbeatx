@@ -110,7 +110,7 @@ class MonodomainSolver:
 
     _solver: dolfinx.fem.petsc.LinearProblem  # Wrapper around PETSc KSP object
 
-    _prec: dolfinx.fem.FormMetaClass
+    _prec: dolfinx.fem.Form
     _prec_matrix: PETSc.Mat
     _custom_prec: bool
 
