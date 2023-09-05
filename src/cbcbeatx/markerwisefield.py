@@ -91,13 +91,13 @@ def rhs_with_markerwise_field(
     """
     v = ufl.TestFunction(V)
     if g is None:
-        dz = ufl.dx
+        dz = ufl.dx(domain=V.mesh)
         rhs = 0.0
     try:
         marker = g.marker  # type: ignore
         dz = ufl.Measure("dx", domain=marker.mesh, subdomain_data=marker)
         rhs = sum([gi * v * dz(i) for (i, gi) in g.items()])  # type: ignore
     except AttributeError:
-        dz = ufl.dx
+        dz = ufl.dx(domain=V.mesh)
         rhs = g * v * dz
     return (dz, rhs)

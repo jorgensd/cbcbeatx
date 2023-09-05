@@ -129,3 +129,9 @@ dmypy.json
 .pyre/
 
 _build/
+
+
+*.xdmf
+*.h5
+*.png
+*.bp/

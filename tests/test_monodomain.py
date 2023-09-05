@@ -13,7 +13,7 @@ class TestMonodomainSolver:
         self.mesh = dolfinx.mesh.create_unit_cube(MPI.COMM_WORLD, N, N, N)
 
         # Create stimulus
-        c = dolfinx.fem.Constant(self.mesh, 2.0)
+        c = dolfinx.fem.Constant(self.mesh, dolfinx.default_scalar_type(2.0))
         self.stimulus = c
 
         # Create conductivity "tensors"
@@ -60,7 +60,7 @@ class TestMonodomainSolver:
         u = ufl.TrialFunction(V)
         v = ufl.TestFunction(V)
         u0 = dolfinx.fem.Function(V)
-        dt = dolfinx.fem.Constant(self.mesh, self.dt)
+        dt = dolfinx.fem.Constant(self.mesh, dolfinx.default_scalar_type(self.dt))
         F = (
             ufl.inner(u - u0, v) * ufl.dx
             - dt * ufl.inner(self.M_i * ufl.grad(u), ufl.grad(v)) * ufl.dx
@@ -161,7 +161,7 @@ def test_manufactured_solution(theta: float, degree: int):
         hs[i] = np.max(mesh.h(mesh.topology.dim, cells_local))
 
         x = ufl.SpatialCoordinate(mesh)
-        t = dolfinx.fem.Constant(mesh, PETSc.ScalarType(t0))
+        t = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(t0))
         t_var = ufl.variable(t)
         u = ufl.cos(2 * ufl.pi * x[0]) * ufl.cos(2 * ufl.pi * x[1]) * ufl.cos(t_var)
         du_dt = ufl.diff(u, t_var)
@@ -170,7 +170,7 @@ def test_manufactured_solution(theta: float, degree: int):
         solver = MonodomainSolver(mesh, M_i, v0=u, time=t, I_s=ict, params=options)
 
         # Create new expression to use constant that is not updated internally in solver
-        t_eval = dolfinx.fem.Constant(mesh, 0.0)
+        t_eval = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
         u_exact = ufl.replace(u, {t_var: t_eval})
         diff = solver._vh - u_exact
         error = dolfinx.fem.form(

@@ -133,7 +133,7 @@ class MonodomainSolver:
 
         # Initialize class variables
         self._custom_prec = _params["use_custom_preconditioner"]
-        self._theta = dolfinx.fem.Constant(mesh, _params["theta"])
+        self._theta = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(_params["theta"]))
         self._V = dolfinx.fem.FunctionSpace(
             mesh,
             ("Lagrange", _params["polynomial_degree"]),
@@ -150,7 +150,7 @@ class MonodomainSolver:
         self._t = (
             time
             if time is not None
-            else dolfinx.fem.Constant(mesh, PETSc.ScalarType(0.0))
+            else dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
         )
 
         # Extract integration measure and RHS of problem
@@ -200,15 +200,13 @@ class MonodomainSolver:
         mesh = self._V.mesh
         self._vh = dolfinx.fem.Function(self._V)
         self._vh.name = "vh"
-        self._k_n = dolfinx.fem.Constant(mesh, dt)
+        self._k_n = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(dt))
 
         v = ufl.TrialFunction(self._V)
         w = ufl.TestFunction(self._V)
         Dt_v_k_n = v - self._v
         v_mid = self._theta * v + (1.0 - self._theta) * self._v
-        theta_parabolic = ufl.inner(M_i * ufl.grad(v_mid), ufl.grad(w)) * dz(
-            domain=mesh,
-        )
+        theta_parabolic = ufl.inner(M_i * ufl.grad(v_mid), ufl.grad(w)) * dz
         G = Dt_v_k_n * w * dz + self._k_n * theta_parabolic - self._k_n * rhs
         a, L = ufl.system(G)
         self._solver = dolfinx.fem.petsc.LinearProblem(
