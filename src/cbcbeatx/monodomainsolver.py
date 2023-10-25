@@ -5,11 +5,10 @@
 # Last changed: 2022-12-12
 import typing
 
-import dolfinx
+import dolfinx.fem.petsc
 import numpy as np
 import ufl
 from petsc4py import PETSc
-import dolfinx.fem.petsc
 
 from .markerwisefield import Markerwise
 from .markerwisefield import rhs_with_markerwise_field
