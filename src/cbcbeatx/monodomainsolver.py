@@ -101,7 +101,7 @@ class MonodomainSolver:
     """
 
     _theta: dolfinx.fem.Constant  # Temporal discretization variable
-    _V: dolfinx.fem.FunctionSpaceBase  # Function space of solution
+    _V: dolfinx.fem.FunctionSpace  # Function space of solution
     _v: dolfinx.fem.Function  # Solution at previous time step
     _vh: dolfinx.fem.Function  # Solution at current time step
 
