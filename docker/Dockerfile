@@ -1,4 +1,4 @@
-FROM ghcr.io/fenics/dolfinx/dolfinx:v0.7.0
+FROM ghcr.io/fenics/dolfinx/dolfinx:nightly
 
 ARG REPO_BRANCH="main"
 ENV DEB_PYTHON_INSTALL_LAYOUT=deb_system
