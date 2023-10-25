@@ -101,7 +101,7 @@ class MonodomainSolver:
     """
 
     _theta: dolfinx.fem.Constant  # Temporal discretization variable
-    _V: dolfinx.fem.FunctionSpace  # Function space of solution
+    _V: dolfinx.fem.FunctionSpaceBase  # Function space of solution
     _v: dolfinx.fem.Function  # Solution at previous time step
     _vh: dolfinx.fem.Function  # Solution at current time step
 
@@ -111,7 +111,7 @@ class MonodomainSolver:
     _solver: dolfinx.fem.petsc.LinearProblem  # Wrapper around PETSc KSP object
 
     _prec: dolfinx.fem.Form
-    _prec_matrix: PETSc.Mat
+    _prec_matrix: PETSc.Mat  # type: ignore
     _custom_prec: bool
 
     __slots__ = tuple(__annotations__)
@@ -134,7 +134,7 @@ class MonodomainSolver:
         # Initialize class variables
         self._custom_prec = _params["use_custom_preconditioner"]
         self._theta = dolfinx.fem.Constant(mesh, _params["theta"])
-        self._V = dolfinx.fem.FunctionSpace(
+        self._V = dolfinx.fem.functionspace(
             mesh,
             ("Lagrange", _params["polynomial_degree"]),
         )
@@ -150,7 +150,7 @@ class MonodomainSolver:
         self._t = (
             time
             if time is not None
-            else dolfinx.fem.Constant(mesh, PETSc.ScalarType(0.0))
+            else dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
         )
 
         # Extract integration measure and RHS of problem

@@ -46,7 +46,7 @@ class Markerwise:
         marker: dolfinx.mesh.MeshTags,
     ):
         assert len(objects) == len(keys)
-        assert marker.dim == marker.mesh.topology.dim
+        assert marker.dim == marker.mesh.topology.dim  # type: ignore
         self._marker = marker
         self._objects = dict(zip(keys, objects))
 
@@ -71,7 +71,7 @@ class Markerwise:
 
 
 def rhs_with_markerwise_field(
-    V: dolfinx.fem.FunctionSpace,
+    V: dolfinx.fem.FunctionSpaceBase,
     g: typing.Optional[typing.Union[ufl.core.expr.Expr, Markerwise]],
 ) -> tuple[ufl.Measure, ufl.Form]:
     """
@@ -95,7 +95,7 @@ def rhs_with_markerwise_field(
         rhs = 0.0
     try:
         marker = g.marker  # type: ignore
-        dz = ufl.Measure("dx", domain=marker.mesh, subdomain_data=marker)
+        dz = ufl.Measure("dx", domain=marker.mesh, subdomain_data=marker)  # type: ignore
         rhs = sum([gi * v * dz(i) for (i, gi) in g.items()])  # type: ignore
     except AttributeError:
         dz = ufl.dx

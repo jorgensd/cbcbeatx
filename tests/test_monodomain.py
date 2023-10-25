@@ -161,7 +161,7 @@ def test_manufactured_solution(theta: float, degree: int):
         hs[i] = np.max(mesh.h(mesh.topology.dim, cells_local))
 
         x = ufl.SpatialCoordinate(mesh)
-        t = dolfinx.fem.Constant(mesh, PETSc.ScalarType(t0))
+        t = dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(t0))
         t_var = ufl.variable(t)
         u = ufl.cos(2 * ufl.pi * x[0]) * ufl.cos(2 * ufl.pi * x[1]) * ufl.cos(t_var)
         du_dt = ufl.diff(u, t_var)
