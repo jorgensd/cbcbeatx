@@ -14,14 +14,12 @@ on:
     # The CI is executed every day at 8am
     - cron: "0 8 * * *"
 
-
 jobs:
   test-code:
     runs-on: ubuntu-22.04
-    container: ghcr.io/fenics/dolfinx/dolfinx:nightly
+    container: ghcr.io/fenics/dolfinx/dolfinx:v0.7.0
     env:
       DEB_PYTHON_INSTALL_LAYOUT: deb_system
-
 
     steps:
       - uses: actions/checkout@v4
