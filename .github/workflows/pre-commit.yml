@@ -9,6 +9,8 @@ on:
     # The CI is executed on every pull request to the main branch
     branches:
       - main
+  workflow_call:
+  workflow_dispatch:
 
   schedule:
     # The CI is executed every day at 8am

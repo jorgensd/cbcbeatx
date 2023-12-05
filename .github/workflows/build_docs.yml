@@ -1,30 +1,16 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
-
+name: Build documentation
 on:
   # Runs on pushes targeting the default branch
-  push:
+  pull_request:
     branches:
-      - "**"
-
-  # Allows you to run this workflow manually from the Actions tab
+      - "main"
+  workflow_call:
   workflow_dispatch:
-
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow one concurrent deployment
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-    container: ghcr.io/fenics/dolfinx/dolfinx:v0.7.0
+    container: ghcr.io/fenics/dolfinx/dolfinx:nightly
     env:
       DEB_PYTHON_INSTALL_LAYOUT: deb_system
       PUBLISH_DIR: ./_build/html
@@ -39,28 +25,9 @@ jobs:
       - name: Build docs
         run: jupyter book build -W .
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+      - name: Upload documentation
+        uses: actions/upload-artifact@v3
         with:
-          path: ${{ env.PUBLISH_DIR }}
-
-  # Single deploy job since we're just deploying
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2
+          name: documentation
+          path: ./_build/html
+          if-no-files-found: error
