@@ -8,7 +8,7 @@ description = "A framework for computational cardiac electrophysiology"
 authors = [{ name = "Jørgen S. Dokken", email = "dokken@simula.no" }]
 license = { file = "LICENSE" }
 readme = "README.md"
-dependencies = ["fenics-dolfinx>=0.7.0"]
+dependencies = ["fenics-dolfinx>0.7.2"]
 
 [project.scripts]
 cbcbeatx = "cbcbeatx.cli:main"
