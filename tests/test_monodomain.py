@@ -1,10 +1,12 @@
+from mpi4py import MPI
+from petsc4py import PETSc
+
 import dolfinx
 import numpy as np
 import pytest
 import ufl
+
 from cbcbeatx import MonodomainSolver
-from mpi4py import MPI
-from petsc4py import PETSc
 
 
 class TestMonodomainSolver:

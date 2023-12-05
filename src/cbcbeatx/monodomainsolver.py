@@ -5,13 +5,13 @@
 # Last changed: 2022-12-12
 import typing
 
+from petsc4py import PETSc
+
 import dolfinx.fem.petsc
 import numpy as np
 import ufl
-from petsc4py import PETSc
 
-from .markerwisefield import Markerwise
-from .markerwisefield import rhs_with_markerwise_field
+from .markerwisefield import Markerwise, rhs_with_markerwise_field
 
 __all__ = ["MonodomainSolver"]
 
@@ -340,7 +340,7 @@ class MonodomainSolver:
         """
         (T0, T) = interval
         if dt is None:
-            num_steps = int(1)
+            num_steps = 1
             dt = T - T0
         else:
             num_steps = int((T - T0) // dt)
