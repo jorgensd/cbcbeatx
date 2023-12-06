@@ -71,7 +71,7 @@ class Markerwise:
 
 
 def rhs_with_markerwise_field(
-    V: dolfinx.fem.FunctionSpaceBase,
+    V: dolfinx.fem.FunctionSpace,
     g: typing.Optional[typing.Union[ufl.core.expr.Expr, Markerwise]],
 ) -> tuple[ufl.Measure, ufl.Form]:
     """

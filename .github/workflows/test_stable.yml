@@ -1,6 +1,7 @@
-name: Test package
+name: Test package against stable release
 
 on:
+  workflow_dispatch:
   push:
     # The CI is executed on every push on every branch
     branches:
@@ -9,18 +10,23 @@ on:
     # The CI is executed on every pull request to the main branch
     branches:
       - main
-  workflow_call:
-  workflow_dispatch:
+
+  schedule:
+    - cron: "30 8 * * 1"
 
 jobs:
   test-code:
     runs-on: ubuntu-22.04
-    container: ghcr.io/fenics/dolfinx/dolfinx:nightly
+    container: ghcr.io/fenics/dolfinx/dolfinx:stable
     env:
       DEB_PYTHON_INSTALL_LAYOUT: deb_system
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout at last working position
+        uses: actions/checkout@v4
+        with:
+          ref: v0.7.0
+          # ${{ github.ref }} # once backward compatibility is broken this should be pinned to a release
 
       - name: Install package
         run: python3 -m pip install .[test]

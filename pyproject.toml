@@ -3,19 +3,19 @@ requires = ["setuptools>=61.0.0", "wheel"]
 
 [project]
 name = "cbcbeatx"
-version = "0.7.0"
+version = "0.7.0.dev0"
 description = "A framework for computational cardiac electrophysiology"
 authors = [{ name = "Jørgen S. Dokken", email = "dokken@simula.no" }]
 license = { file = "LICENSE" }
 readme = "README.md"
-dependencies = ["fenics-dolfinx>=0.7.0"]
+dependencies = ["fenics-dolfinx>0.7.2"]
 
 [project.scripts]
 cbcbeatx = "cbcbeatx.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest"]
-dev = ["pdbpp", "ipython", "mypy", "flake8"]
+dev = ["pdbpp", "ipython", "mypy", "black", "ruff"]
 docs = ["jupyter-book", "jupytext"]
 all = ["cbcbeatx[test]", "cbcbeatx[dev]", "cbcbeatx[docs]"]
 
@@ -31,3 +31,54 @@ ignore_missing_imports = true
 exclude = ["docs/", "build/"]
 # Folder to check with mypy
 files = ["src", "tests"]
+
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+allowed-confusables = ["σ"]
+
+[tool.ruff.lint]
+select = [
+    # "B",
+    # "D", # pydocstyle
+    "E",   # pycodestyle
+    "W",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort
+    "RUF", # Ruff-specific rules
+    "UP",  # pyupgrade
+    # "ANN",
+    "ICN",
+    # "SIM",
+    # "PL",
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["cbcbeatx"]
+known-third-party = [
+    "basix",
+    "dolfinx",
+    "ffcx",
+    "ufl",
+    "gmsh",
+    "numba",
+    "numpy",
+    "pytest",
+    "pyvista",
+]
+section-order = [
+    "future",
+    "standard-library",
+    "mpi",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+"mpi" = ["mpi4py", "petsc4py"]

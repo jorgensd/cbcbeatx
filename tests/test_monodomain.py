@@ -1,10 +1,12 @@
+from mpi4py import MPI
+from petsc4py import PETSc
+
 import dolfinx
 import numpy as np
 import pytest
 import ufl
+
 from cbcbeatx import MonodomainSolver
-from mpi4py import MPI
-from petsc4py import PETSc
 
 
 class TestMonodomainSolver:
@@ -30,7 +32,7 @@ class TestMonodomainSolver:
         # Create solver and solve
         solver = MonodomainSolver(self.mesh, self.M_i, I_s=self.stimulus)
         solutions = solver.solve((self.t0, self.t0 + 2 * self.dt), self.dt)
-        for (interval, fields) in solutions:
+        for interval, fields in solutions:
             (v_, vur) = fields
 
     @pytest.mark.fast
@@ -61,10 +63,7 @@ class TestMonodomainSolver:
         v = ufl.TestFunction(V)
         u0 = dolfinx.fem.Function(V)
         dt = dolfinx.fem.Constant(self.mesh, self.dt)
-        F = (
-            ufl.inner(u - u0, v) * ufl.dx
-            - dt * ufl.inner(self.M_i * ufl.grad(u), ufl.grad(v)) * ufl.dx
-        )
+        F = ufl.inner(u - u0, v) * ufl.dx - dt * ufl.inner(self.M_i * ufl.grad(u), ufl.grad(v)) * ufl.dx
         F -= dt * ufl.inner(self.stimulus, v) * ufl.dx
         a, L = ufl.system(F)
         solver = dolfinx.fem.petsc.LinearProblem(
@@ -73,7 +72,7 @@ class TestMonodomainSolver:
             petsc_options=params_direct["petsc_options"],
         )
 
-        for (interval, fields) in solutions:
+        for interval, fields in solutions:
             (_, vur) = fields
             uh = solver.solve()
             assert np.allclose(vur.x.array, uh.x.array)
@@ -97,7 +96,7 @@ class TestMonodomainSolver:
             params=params_direct,
         )
         solutions = solver.solve((self.t0, self.t0 + 3 * self.dt), self.dt)
-        for (interval, fields) in solutions:
+        for interval, fields in solutions:
             (v_, v) = fields
             v.vector.normBegin(PETSc.NormType.NORM_2)
             l2_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
@@ -113,7 +112,7 @@ class TestMonodomainSolver:
             params=params_iter,
         )
         solutions = solver.solve((self.t0, self.t0 + 3 * self.dt), self.dt)
-        for (interval, fields) in solutions:
+        for interval, fields in solutions:
             (v_, v) = fields
             v.vector.normBegin(PETSc.NormType.NORM_2)
             krylov_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
@@ -178,7 +177,7 @@ def test_manufactured_solution(theta: float, degree: int):
         )
 
         solutions = solver.solve((t0, t1), dt)
-        for (interval, _) in solutions:
+        for interval, _ in solutions:
             _, ti = interval
 
             t_eval.value = ti

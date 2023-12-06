@@ -28,9 +28,13 @@ parse:
     - linkify
 
 sphinx:
-  extra_extensions:
-  - 'sphinx.ext.autodoc'
-  - 'sphinx.ext.napoleon'
-  - 'sphinx.ext.viewcode'
+  config:
+    html_last_updated_fmt: "%b %d, %Y"
+    nb_execution_show_tb: True
 
-exclude_patterns: ["README.md",".pytest_cache/*"]
+  extra_extensions:
+    - "sphinx.ext.autodoc"
+    - "sphinx.ext.napoleon"
+    - "sphinx.ext.viewcode"
+
+exclude_patterns: ["README.md", ".pytest_cache/*"]

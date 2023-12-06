@@ -5,13 +5,13 @@
 # Last changed: 2022-12-12
 import typing
 
+from petsc4py import PETSc
+
 import dolfinx.fem.petsc
 import numpy as np
 import ufl
-from petsc4py import PETSc
 
-from .markerwisefield import Markerwise
-from .markerwisefield import rhs_with_markerwise_field
+from .markerwisefield import Markerwise, rhs_with_markerwise_field
 
 __all__ = ["MonodomainSolver"]
 
@@ -100,7 +100,7 @@ class MonodomainSolver:
     """
 
     _theta: dolfinx.fem.Constant  # Temporal discretization variable
-    _V: dolfinx.fem.FunctionSpaceBase  # Function space of solution
+    _V: dolfinx.fem.FunctionSpace  # Function space of solution
     _v: dolfinx.fem.Function  # Solution at previous time step
     _vh: dolfinx.fem.Function  # Solution at current time step
 
@@ -124,7 +124,6 @@ class MonodomainSolver:
         time: typing.Optional[dolfinx.fem.Constant] = None,
         params: typing.Optional[dict] = None,
     ):
-
         # Get default parameters and overload with input parameters
         _params = self.default_parameters()
         if params is not None:
@@ -146,11 +145,7 @@ class MonodomainSolver:
             self._v.interpolate(init_v)
 
         # Set initial simulation time
-        self._t = (
-            time
-            if time is not None
-            else dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
-        )
+        self._t = time if time is not None else dolfinx.fem.Constant(mesh, dolfinx.default_scalar_type(0.0))
 
         # Extract integration measure and RHS of problem
         (dz, rhs) = rhs_with_markerwise_field(self._V, I_s)
@@ -238,8 +233,7 @@ class MonodomainSolver:
             v = ufl.TrialFunction(self._V)
             w = ufl.TestFunction(self._V)
             self._prec = dolfinx.fem.form(
-                (v * w + self._k_n / 2.0 * ufl.inner(M_i * ufl.grad(v), ufl.grad(w)))
-                * dz,
+                (v * w + self._k_n / 2.0 * ufl.inner(M_i * ufl.grad(v), ufl.grad(w))) * dz,
                 form_compiler_options=form_compiler_options,
                 jit_options=jit_options,
             )
@@ -340,7 +334,7 @@ class MonodomainSolver:
         """
         (T0, T) = interval
         if dt is None:
-            num_steps = int(1)
+            num_steps = 1
             dt = T - T0
         else:
             num_steps = int((T - T0) // dt)
