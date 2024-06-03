@@ -157,6 +157,7 @@ def test_manufactured_solution(theta: float, degree: int):
 
         cmap = mesh.topology.index_map(mesh.topology.dim)
         cells_local = np.arange(cmap.size_local + cmap.num_ghosts, dtype=np.int32)
+        mesh.topology.create_connectivity(mesh.topology.dim, mesh.topology.dim)
         hs[i] = np.max(mesh.h(mesh.topology.dim, cells_local))
 
         x = ufl.SpatialCoordinate(mesh)
