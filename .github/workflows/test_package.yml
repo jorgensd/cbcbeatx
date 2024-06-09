@@ -11,6 +11,9 @@ on:
       - main
   workflow_call:
   workflow_dispatch:
+  schedule:
+    - cron: "30 8 * * 1"
+  
 
 jobs:
   test-code:
