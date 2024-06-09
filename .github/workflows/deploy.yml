@@ -3,7 +3,7 @@ name: Publish documentation
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["main"]
+    branches: ["release"]
 
   schedule:
     - cron: "0 8 * * *"

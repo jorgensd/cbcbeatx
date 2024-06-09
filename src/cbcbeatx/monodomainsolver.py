@@ -306,7 +306,7 @@ class MonodomainSolver:
         self._t.value = t0 + self._theta.value * (t1 - t0)
         self._update_rhs()
         # Solve linear system and update ghost values in the solution
-        self._solver.solver.solve(self._solver.b, self._vh.vector)
+        self._solver.solver.solve(self._solver.b, self._vh.x.petsc_vec)
         self._vh.x.scatter_forward()
 
     def solve(
