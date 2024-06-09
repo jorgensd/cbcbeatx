@@ -1,7 +1,6 @@
 name: Publish documentation
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["release"]
 
@@ -29,7 +28,7 @@ jobs:
     uses: ./.github/workflows/build_docs.yml
 
   run-tests:
-    uses: ./.github/workflows/test_package.yml
+    uses: ./.github/workflows/test_stable.yml
 
   deploy:
     runs-on: ubuntu-22.04
