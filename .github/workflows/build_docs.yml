@@ -3,14 +3,14 @@ on:
   # Runs on pushes targeting the default branch
   pull_request:
     branches:
-      - "main"
+      - "release"
   workflow_call:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-    container: ghcr.io/fenics/dolfinx/dolfinx:nightly
+    container: ghcr.io/fenics/dolfinx/dolfinx:stable
     env:
       DEB_PYTHON_INSTALL_LAYOUT: deb_system
       PUBLISH_DIR: ./_build/html

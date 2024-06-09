@@ -98,8 +98,8 @@ class TestMonodomainSolver:
         solutions = solver.solve((self.t0, self.t0 + 3 * self.dt), self.dt)
         for interval, fields in solutions:
             (v_, v) = fields
-            v.vector.normBegin(PETSc.NormType.NORM_2)
-            l2_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
+            v.x.petsc_vec.normBegin(PETSc.NormType.NORM_2)
+            l2_norm = v.x.petsc_vec.normEnd(PETSc.NormType.NORM_2)
 
         # Create solver and solve using iterative means
         params_iter = {
@@ -114,8 +114,8 @@ class TestMonodomainSolver:
         solutions = solver.solve((self.t0, self.t0 + 3 * self.dt), self.dt)
         for interval, fields in solutions:
             (v_, v) = fields
-            v.vector.normBegin(PETSc.NormType.NORM_2)
-            krylov_norm = v.vector.normEnd(PETSc.NormType.NORM_2)
+            v.x.petsc_vec.normBegin(PETSc.NormType.NORM_2)
+            krylov_norm = v.x.petsc_vec.normEnd(PETSc.NormType.NORM_2)
 
         np.isclose(l2_norm, krylov_norm, atol=1e-4)
 
