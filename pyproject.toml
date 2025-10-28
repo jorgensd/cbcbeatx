@@ -39,9 +39,9 @@ line-length = 120
 [tool.ruff]
 line-length = 120
 indent-width = 4
-allowed-confusables = ["σ"]
 
 [tool.ruff.lint]
+allowed-confusables = ["σ"]
 select = [
     # "B",
     # "D", # pydocstyle

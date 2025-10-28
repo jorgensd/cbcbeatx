@@ -3,12 +3,11 @@
 # SPDX-License-Identifier:    MIT
 #
 # Last changed: 2022-12-12
-import typing
 
 import dolfinx
 import ufl
 
-__all__ = ["rhs_with_markerwise_field", "Markerwise"]
+__all__ = ["Markerwise", "rhs_with_markerwise_field"]
 
 
 class Markerwise:
@@ -72,8 +71,8 @@ class Markerwise:
 
 def rhs_with_markerwise_field(
     V: dolfinx.fem.FunctionSpace,
-    g: typing.Optional[typing.Union[ufl.core.expr.Expr, Markerwise]],
-) -> tuple[ufl.Measure, ufl.Form]:
+    g: ufl.core.expr.Expr | Markerwise | None,
+) -> tuple[ufl.Measure, ufl.Form | ufl.ZeroBaseForm]:
     """
     Create the ufl-form :math:`G=\\int_\\Omega g v~\\mathrm{d}x` where `g` can be:
 
@@ -92,7 +91,7 @@ def rhs_with_markerwise_field(
     v = ufl.TestFunction(V)
     if g is None:
         dz = ufl.dx
-        rhs = 0.0
+        rhs = ufl.ZeroBaseForm((v,))
     try:
         marker = g.marker  # type: ignore
         dz = ufl.Measure("dx", domain=marker.mesh, subdomain_data=marker)  # type: ignore
@@ -100,4 +99,5 @@ def rhs_with_markerwise_field(
     except AttributeError:
         dz = ufl.dx
         rhs = g * v * dz
+    assert isinstance(rhs, (ufl.Form, ufl.ZeroBaseForm))
     return (dz, rhs)

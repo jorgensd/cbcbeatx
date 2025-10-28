@@ -119,10 +119,10 @@ class MonodomainSolver:
         self,
         mesh: dolfinx.mesh.Mesh,
         M_i: ufl.core.expr.Expr,
-        I_s: typing.Optional[tuple[ufl.core.expr.Expr, Markerwise]] = None,
-        v0: typing.Optional[ufl.core.expr.Expr] = None,
-        time: typing.Optional[dolfinx.fem.Constant] = None,
-        params: typing.Optional[dict] = None,
+        I_s: ufl.core.expr.Expr | Markerwise | None = None,
+        v0: ufl.core.expr.Expr | None = None,
+        time: dolfinx.fem.Constant | None = None,
+        params: dict | None = None,
     ):
         # Get default parameters and overload with input parameters
         _params = self.default_parameters()
@@ -163,8 +163,8 @@ class MonodomainSolver:
 
         # Initialize the preconditioner
         self._init_preconditioner(
-            dz,
             M_i,
+            dz,
             _params["form_compiler_options"],
             _params["jit_options"],
         )
@@ -174,7 +174,7 @@ class MonodomainSolver:
         dt: float,
         dz: ufl.Measure,
         M_i: ufl.core.expr.Expr,
-        rhs: ufl.form.Form,
+        rhs: ufl.form.Form | ufl.ZeroBaseForm,
         form_compiler_options: dict,
         jit_options: dict,
         petsc_options: dict,
@@ -313,11 +313,11 @@ class MonodomainSolver:
     def solve(
         self,
         interval: tuple[float, float],
-        dt: typing.Optional[float] = None,
+        dt: float | None = None,
     ) -> typing.Generator[
-        typing.Tuple[
-            typing.Tuple[float, float],
-            typing.Tuple[dolfinx.fem.Function, dolfinx.fem.Function],
+        tuple[
+            tuple[float, float],
+            tuple[dolfinx.fem.Function, dolfinx.fem.Function],
         ],
         None,
         None,
