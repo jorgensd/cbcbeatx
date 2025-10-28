@@ -11,16 +11,18 @@ on:
       - main
   workflow_call:
   workflow_dispatch:
+  schedule:
+    - cron: "30 8 * * 1"
 
 jobs:
   test-code:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     container: ghcr.io/fenics/dolfinx/dolfinx:nightly
     env:
       DEB_PYTHON_INSTALL_LAYOUT: deb_system
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install package
         run: python3 -m pip install .[test]

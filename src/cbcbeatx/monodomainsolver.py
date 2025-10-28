@@ -141,7 +141,7 @@ class MonodomainSolver:
         self._v = dolfinx.fem.Function(self._V)
         self._v.name = "v_prev"
         if v0 is not None:
-            init_v = dolfinx.fem.Expression(v0, self._V.element.interpolation_points())
+            init_v = dolfinx.fem.Expression(v0, self._V.element.interpolation_points)
             self._v.interpolate(init_v)
 
         # Set initial simulation time
@@ -212,6 +212,7 @@ class MonodomainSolver:
             form_compiler_options=form_compiler_options,
             jit_options=jit_options,
             petsc_options=petsc_options,
+            petsc_options_prefix="monodomain_",
         )
 
         dolfinx.fem.petsc.assemble_matrix(self._solver.A, self._solver.a)  # type: ignore

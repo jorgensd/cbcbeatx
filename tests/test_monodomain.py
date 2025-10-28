@@ -24,7 +24,6 @@ class TestMonodomainSolver:
         self.t0 = 0.0
         self.dt = 0.01
 
-    @pytest.mark.fast
     def test_solve(self):
         "Test that solver runs."
         self.setUp()
@@ -32,22 +31,21 @@ class TestMonodomainSolver:
         # Create solver and solve
         solver = MonodomainSolver(self.mesh, self.M_i, I_s=self.stimulus)
         solutions = solver.solve((self.t0, self.t0 + 2 * self.dt), self.dt)
-        for interval, fields in solutions:
-            (v_, vur) = fields
+        for _interval, fields in solutions:
+            (_v_, _vur) = fields
 
-    @pytest.mark.fast
     def test_compare_with_basic_solve(self):
         """Test that solver with direct linear algebra gives same
         results as a straightforward implementation solver."""
         self.setUp()
 
         # Create solver and solve
+        if MPI.COMM_WORLD.size == 1:
+            mat_fac = "petsc"
+        else:
+            mat_fac = "superlu_dist"
         params_direct = {
-            "petsc_options": {
-                "ksp_type": "preonly",
-                "pc_type": "lu",
-                "pc_factor_mat_solver_type": "mumps",
-            },
+            "petsc_options": {"ksp_type": "preonly", "pc_type": "lu", "pc_factor_mat_solver_type": mat_fac},
         }
         solver = MonodomainSolver(
             self.mesh,
@@ -67,9 +65,7 @@ class TestMonodomainSolver:
         F -= dt * ufl.inner(self.stimulus, v) * ufl.dx
         a, L = ufl.system(F)
         solver = dolfinx.fem.petsc.LinearProblem(
-            a,
-            L,
-            petsc_options=params_direct["petsc_options"],
+            a, L, petsc_options=params_direct["petsc_options"], petsc_options_prefix="basic_heat_"
         )
 
         for interval, fields in solutions:
@@ -82,7 +78,6 @@ class TestMonodomainSolver:
         MPI.COMM_WORLD.size > 1,
         reason="This test should only be run in serial.",
     )
-    @pytest.mark.fast
     def test_compare_direct_iterative(self):
         "Test that direct and iterative solution give comparable results."
         self.setUp()
@@ -153,7 +148,7 @@ def test_manufactured_solution(theta: float, degree: int):
         error_time = []
         if i > 0:
             mesh.topology.create_entities(1)
-            mesh = dolfinx.mesh.refine(mesh)
+            mesh, _, _ = dolfinx.mesh.refine(mesh)
 
         cmap = mesh.topology.index_map(mesh.topology.dim)
         cells_local = np.arange(cmap.size_local + cmap.num_ghosts, dtype=np.int32)
