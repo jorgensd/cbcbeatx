@@ -65,7 +65,10 @@ class TestMonodomainSolver:
         F -= dt * ufl.inner(self.stimulus, v) * ufl.dx
         a, L = ufl.system(F)
         solver = dolfinx.fem.petsc.LinearProblem(
-            a, L, petsc_options=params_direct["petsc_options"], petsc_options_prefix="basic_heat_"
+            a,
+            L,
+            petsc_options=params_direct["petsc_options"],
+            petsc_options_prefix="basic_heat_",
         )
 
         for interval, fields in solutions:

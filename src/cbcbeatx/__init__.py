@@ -7,7 +7,7 @@ from .monodomainsolver import MonodomainSolver
 
 meta = metadata("cbcbeatx")
 __version__ = meta["Version"]
-__author__ = meta.get("Author", "")
+__author__ = meta.get("Author", "")  # type: ignore[attr-defined]
 __license__ = meta["License"]
 __email__ = meta["Author-email"]
 __program_name__ = meta["Name"]
