@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     container: ghcr.io/fenics/dolfinx/dolfinx:stable
     env:
       DEB_PYTHON_INSTALL_LAYOUT: deb_system
