@@ -1,4 +1,5 @@
 """Console script for cbcbeatx."""
+
 import argparse
 
 
@@ -11,5 +12,5 @@ def main():
     args = parser.parse_args()
 
     print("Arguments: " + str(args._))
-    print("Replace this message by putting your code into " "cbcbeatx.cli.main")
+    print("Replace this message by putting your code into cbcbeatx.cli.main")
     return 0

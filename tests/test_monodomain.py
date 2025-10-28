@@ -32,7 +32,7 @@ class TestMonodomainSolver:
         solver = MonodomainSolver(self.mesh, self.M_i, I_s=self.stimulus)
         solutions = solver.solve((self.t0, self.t0 + 2 * self.dt), self.dt)
         for _interval, fields in solutions:
-            (_v_, _vur) = fields
+            (_v, _vur) = fields
 
     def test_compare_with_basic_solve(self):
         """Test that solver with direct linear algebra gives same
@@ -91,8 +91,8 @@ class TestMonodomainSolver:
             params=params_direct,
         )
         solutions = solver.solve((self.t0, self.t0 + 3 * self.dt), self.dt)
-        for interval, fields in solutions:
-            (v_, v) = fields
+        for _interval, fields in solutions:
+            (_v, v) = fields
             v.x.petsc_vec.normBegin(PETSc.NormType.NORM_2)
             l2_norm = v.x.petsc_vec.normEnd(PETSc.NormType.NORM_2)
 
@@ -107,8 +107,8 @@ class TestMonodomainSolver:
             params=params_iter,
         )
         solutions = solver.solve((self.t0, self.t0 + 3 * self.dt), self.dt)
-        for interval, fields in solutions:
-            (v_, v) = fields
+        for _interval, fields in solutions:
+            (_v, v) = fields
             v.x.petsc_vec.normBegin(PETSc.NormType.NORM_2)
             krylov_norm = v.x.petsc_vec.normEnd(PETSc.NormType.NORM_2)
 
