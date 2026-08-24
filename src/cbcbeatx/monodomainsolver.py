@@ -113,7 +113,6 @@ class MonodomainSolver:
     _prec_matrix: PETSc.Mat  # type: ignore
     _custom_prec: bool
 
-    __slots__ = tuple(__annotations__)
 
     def __init__(
         self,
