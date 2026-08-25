@@ -113,7 +113,6 @@ class MonodomainSolver:
     _prec_matrix: PETSc.Mat  # type: ignore
     _custom_prec: bool
 
-
     def __init__(
         self,
         mesh: dolfinx.mesh.Mesh,
